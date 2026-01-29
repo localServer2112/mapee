@@ -13,6 +13,14 @@ import { calculateJitter } from "./latency";
  *   > 30 days: ignored
  */
 
+export type ConfidenceLevel = "high" | "medium" | "low";
+
+export interface ConfidenceResult {
+  score: number;
+  topISP: string;
+  confidenceLevel: ConfidenceLevel;
+}
+
 /**
  * Get the freshness weight for a ping based on its age
  */
@@ -47,13 +55,22 @@ export function calculateWeightedAverageLatency(pings: PingLog[]): number {
   let totalWeight = 0;
   let weightedSum = 0;
 
-  for (const ping of freshPings) {
+  freshPings.forEach((ping) => {
     const weight = getFreshnessWeight(ping.timestamp);
     weightedSum += ping.latencyMs * weight;
     totalWeight += weight;
-  }
+  });
 
   return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+}
+
+/**
+ * Get confidence level based on score
+ */
+export function getConfidenceLevel(score: number): ConfidenceLevel {
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
+  return "low";
 }
 
 /**
@@ -67,10 +84,10 @@ export function calculateConfidenceScore(pings: PingLog[]): number {
   if (freshPings.length === 0) return 0;
 
   // Factor 1: Number of unique pings (weighted by freshness)
-  const weightedCount = freshPings.reduce(
-    (sum, ping) => sum + getFreshnessWeight(ping.timestamp),
-    0
-  );
+  let weightedCount = 0;
+  freshPings.forEach((ping) => {
+    weightedCount += getFreshnessWeight(ping.timestamp);
+  });
 
   // Factor 2: Consistency (inverse of standard deviation)
   const latencies = freshPings.map((p) => p.latencyMs);
@@ -84,6 +101,21 @@ export function calculateConfidenceScore(pings: PingLog[]): number {
 
   // Cap at 100 for display purposes
   return Math.min(100, Math.round(rawScore));
+}
+
+/**
+ * Calculate full confidence result with score, topISP, and level
+ */
+export function calculateConfidence(pings: PingLog[]): ConfidenceResult {
+  const score = calculateConfidenceScore(pings);
+  const topISP = getTopISP(pings);
+  const confidenceLevel = getConfidenceLevel(score);
+
+  return {
+    score,
+    topISP,
+    confidenceLevel,
+  };
 }
 
 /**
@@ -103,27 +135,47 @@ export function calculateConsistency(
 
 /**
  * Get the most common ISP in a set of pings
+ * Tie-breaker: If two ISPs have the same count, pick the one with lower avg latency
  */
 export function getTopISP(pings: PingLog[]): string {
   const freshPings = filterFreshPings(pings);
-  if (freshPings.length === 0) return "Unknown";
+  if (freshPings.length === 0) return "No Data";
 
-  const ispCounts = new Map<string, number>();
-  for (const ping of freshPings) {
-    const count = ispCounts.get(ping.reportedISP) || 0;
-    ispCounts.set(ping.reportedISP, count + 1);
-  }
+  // Track count and total latency for each ISP
+  const ispStats = new Map<string, { count: number; totalLatency: number }>();
 
-  let topISP = "Unknown";
+  freshPings.forEach((ping) => {
+    const existing = ispStats.get(ping.reportedISP);
+    if (existing) {
+      existing.count += 1;
+      existing.totalLatency += ping.latencyMs;
+    } else {
+      ispStats.set(ping.reportedISP, {
+        count: 1,
+        totalLatency: ping.latencyMs,
+      });
+    }
+  });
+
+  let topISP = "No Data";
   let maxCount = 0;
-  for (const [isp, count] of ispCounts) {
-    if (count > maxCount) {
-      maxCount = count;
+  let bestAvgLatency = Infinity;
+
+  ispStats.forEach((stats, isp) => {
+    const avgLatency = stats.totalLatency / stats.count;
+
+    // Higher count wins, or same count with lower latency wins
+    if (
+      stats.count > maxCount ||
+      (stats.count === maxCount && avgLatency < bestAvgLatency)
+    ) {
+      maxCount = stats.count;
+      bestAvgLatency = avgLatency;
       topISP = isp;
     }
-  }
+  });
 
-  return topISP;
+  return maxCount > 0 ? topISP : "No Data";
 }
 
 /**
@@ -137,18 +189,28 @@ export function getISPRankings(
 
   const ispData = new Map<string, { total: number; count: number }>();
 
-  for (const ping of freshPings) {
-    const data = ispData.get(ping.reportedISP) || { total: 0, count: 0 };
-    data.total += ping.latencyMs;
-    data.count += 1;
-    ispData.set(ping.reportedISP, data);
-  }
+  freshPings.forEach((ping) => {
+    const existing = ispData.get(ping.reportedISP);
+    if (existing) {
+      existing.total += ping.latencyMs;
+      existing.count += 1;
+    } else {
+      ispData.set(ping.reportedISP, {
+        total: ping.latencyMs,
+        count: 1,
+      });
+    }
+  });
 
-  const rankings = Array.from(ispData.entries()).map(([isp, data]) => ({
-    isp,
-    avgLatency: Math.round(data.total / data.count),
-    count: data.count,
-  }));
+  const rankings: Array<{ isp: string; avgLatency: number; count: number }> = [];
+
+  ispData.forEach((data, isp) => {
+    rankings.push({
+      isp,
+      avgLatency: Math.round(data.total / data.count),
+      count: data.count,
+    });
+  });
 
   // Sort by average latency (ascending - fastest first)
   return rankings.sort((a, b) => a.avgLatency - b.avgLatency);
