@@ -8,6 +8,9 @@ import { ASNInfo } from "@/types";
  * Free tier allows 45 requests per minute.
  */
 
+// Force dynamic rendering - this route uses request headers
+export const dynamic = "force-dynamic";
+
 const IP_API_URL = "http://ip-api.com/json";
 
 export async function GET(request: NextRequest) {
@@ -43,16 +46,27 @@ export async function GET(request: NextRequest) {
       org: data.org || data.isp || "Unknown",
     };
 
-    return NextResponse.json(asnInfo);
+    return NextResponse.json(asnInfo, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   } catch (error) {
     console.error("ASN lookup error:", error);
 
     // Return a fallback response
-    return NextResponse.json({
-      isp: "Unknown",
-      as: "",
-      asname: "",
-      org: "Unknown",
-    });
+    return NextResponse.json(
+      {
+        isp: "Unknown",
+        as: "",
+        asname: "",
+        org: "Unknown",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   }
 }
