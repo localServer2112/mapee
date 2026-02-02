@@ -43,7 +43,18 @@ export function useGeolocation(): UseGeolocationReturn {
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Apply jittering for privacy
+          // Accuracy check: reject if accuracy is too poor (> 100m)
+          // Ideally we want 10-30m, but GPS varies. 
+          // We rely on jitterCoordinates to enforce the PRIVACY range of 10-30m.
+          // Here we ensures DATA QUALITY.
+          if (position.coords.accuracy > 100) {
+            setError("GPS signal too weak. Please go outdoors or improve signal (Accuracy > 100m).");
+            setIsLoading(false);
+            resolve(null);
+            return;
+          }
+
+          // Apply jittering for privacy (enforces 10-30m offset)
           const jittered = jitterCoordinates(
             position.coords.latitude,
             position.coords.longitude
@@ -65,17 +76,17 @@ export function useGeolocation(): UseGeolocationReturn {
 
           switch (err.code) {
             case err.PERMISSION_DENIED:
-              errorMessage = "Location permission denied. Please enable location access.";
+              errorMessage = "Location permission denied. Please enable location access in your browser/system settings.";
               setPermissionState("denied");
               break;
             case err.POSITION_UNAVAILABLE:
-              errorMessage = "Location information is unavailable.";
+              errorMessage = "Unable to determine location. Please ensure Location Services are enabled in System Settings and try again.";
               break;
             case err.TIMEOUT:
-              errorMessage = "Location request timed out.";
+              errorMessage = "Location request timed out. Please check your connection and try again.";
               break;
             default:
-              errorMessage = "An unknown error occurred.";
+              errorMessage = "Unable to get location. Please check your settings and try again.";
           }
 
           setError(errorMessage);

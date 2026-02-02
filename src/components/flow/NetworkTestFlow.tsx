@@ -33,6 +33,8 @@ export default function NetworkTestFlow({
   const [testResult, setTestResult] = useState<{
     latencyMs: number;
     jitter: number;
+    uploadSpeed: number;
+    downloadSpeed: number;
   } | null>(null);
 
   const handleLocationGranted = (coords: Coordinates) => {
@@ -47,8 +49,13 @@ export default function NetworkTestFlow({
     onTestingStateChange?.(true);
   };
 
-  const handleTestComplete = (latencyMs: number, jitter: number) => {
-    setTestResult({ latencyMs, jitter });
+  const handleTestComplete = (
+    latencyMs: number,
+    jitter: number,
+    uploadSpeed: number,
+    downloadSpeed: number
+  ) => {
+    setTestResult({ latencyMs, jitter, uploadSpeed, downloadSpeed });
     onTestingStateChange?.(false);
     setStep("success");
   };
@@ -64,6 +71,8 @@ export default function NetworkTestFlow({
       verifiedASN: null,
       latencyMs: testResult.latencyMs,
       jitter: testResult.jitter,
+      uploadSpeed: testResult.uploadSpeed,
+      downloadSpeed: testResult.downloadSpeed,
       timestamp: Date.now(),
       deviceType: detectDeviceType(),
       userAgent: getUserAgent(),
@@ -113,6 +122,8 @@ export default function NetworkTestFlow({
                 <SuccessStep
                   latencyMs={testResult.latencyMs}
                   jitter={testResult.jitter}
+                  uploadSpeed={testResult.uploadSpeed}
+                  downloadSpeed={testResult.downloadSpeed}
                   isp={selectedISP}
                   onConfirm={handleSubmit}
                 />

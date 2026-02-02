@@ -31,16 +31,16 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
       <motion.div
         animate={{ scale: [1, 1.1, 1] }}
         transition={{ duration: 2, repeat: Infinity }}
-        className="w-20 h-20 rounded-full bg-ping-good/20 flex items-center justify-center mb-6"
+        className="w-20 h-20 rounded-sm bg-neon-cyan/10 flex items-center justify-center mb-6 border border-neon-cyan/30"
       >
-        <MapPin className="w-10 h-10 text-ping-good" />
+        <MapPin className="w-10 h-10 text-neon-cyan" />
       </motion.div>
 
       {/* Title */}
-      <h2 className="text-xl font-semibold text-white mb-2">
-        Enable Location Access
+      <h2 className="text-xl font-bold text-foreground mb-2 font-mono">
+        ENABLE LOCATION
       </h2>
-      <p className="text-sm text-slate-400 mb-6 max-w-xs">
+      <p className="text-sm text-muted-foreground mb-6 max-w-xs">
         We need your location to map network quality in your area.
       </p>
 
@@ -49,38 +49,43 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 px-4 py-2 mb-4 bg-red-500/10 border border-red-500/20 rounded-lg"
+          className="flex flex-col items-center gap-3 px-4 py-4 mb-4 bg-neon-red/10 border border-neon-red/30 rounded-sm"
         >
-          <AlertCircle className="w-4 h-4 text-red-400" />
-          <span className="text-sm text-red-400">{error}</span>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-neon-red flex-shrink-0" />
+            <span className="text-sm text-neon-red font-mono text-left">{error}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            On macOS: System Settings → Privacy & Security → Location Services
+          </p>
         </motion.div>
       )}
 
       {/* Privacy disclaimer */}
-      <div className="flex items-start gap-2 p-3 bg-slate-800/50 rounded-lg mb-6 text-left">
-        <Shield className="w-4 h-4 text-ping-good mt-0.5 flex-shrink-0" />
-        <p className="text-xs text-slate-400">{getPrivacyDisclaimer()}</p>
+      <div className="flex items-start gap-2 p-3 cyber-card mb-6 text-left">
+        <Shield className="w-4 h-4 text-neon-green mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-muted-foreground">{getPrivacyDisclaimer()}</p>
       </div>
 
       {/* Action button */}
       <Button
         onClick={handleRequest}
         disabled={isLoading}
-        className="w-full bg-ping-good hover:bg-ping-good/90 text-white"
+        className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono"
       >
         {isLoading ? (
           <>
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
+              className="w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2"
             />
-            Getting Location...
+            GETTING LOCATION...
           </>
         ) : (
           <>
             <MapPin className="w-4 h-4 mr-2" />
-            Allow Location Access
+            ALLOW LOCATION
           </>
         )}
       </Button>

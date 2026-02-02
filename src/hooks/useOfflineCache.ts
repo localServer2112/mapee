@@ -52,13 +52,18 @@ export function useOfflineCache<T>(
 
 /**
  * Hook for tracking online/offline status
+ * Returns true during SSR and initial hydration to prevent mismatch
  */
 export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
+  // Always start with true to match server render
+  const [isOnline, setIsOnline] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Set mounted and read actual online status after hydration
+    setMounted(true);
+    setIsOnline(navigator.onLine);
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -71,7 +76,8 @@ export function useOnlineStatus(): boolean {
     };
   }, []);
 
-  return isOnline;
+  // Return true until mounted to match server render
+  return mounted ? isOnline : true;
 }
 
 /**

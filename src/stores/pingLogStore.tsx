@@ -5,10 +5,11 @@ import {
   useContext,
   useReducer,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
-import { PingLog, PingLogState, PingLogAction, HexBin, CellTower } from "@/types";
-import { STORAGE_KEYS } from "@/lib/constants";
+import { PingLog, PingLogState, PingLogAction, HexBin, CellTower, MapBounds } from "@/types";
+import { STORAGE_KEYS, API_URLS } from "@/lib/constants";
 
 const initialState: PingLogState = {
   logs: [],
@@ -102,14 +103,60 @@ function saveToStorage<T>(key: string, data: T): void {
   }
 }
 
+// API helpers
+async function syncPingToServer(log: PingLog): Promise<boolean> {
+  try {
+    const response = await fetch("/api/pings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(log),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to sync ping:", await response.text());
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error syncing ping:", error);
+    return false;
+  }
+}
+
+async function fetchPingsFromServer(bounds: MapBounds): Promise<PingLog[]> {
+  try {
+    const params = new URLSearchParams({
+      north: String(bounds.north),
+      south: String(bounds.south),
+      east: String(bounds.east),
+      west: String(bounds.west),
+      maxAge: "30",
+    });
+
+    const response = await fetch(`/api/pings?${params}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch pings");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching pings:", error);
+    return [];
+  }
+}
+
 // Context
 const PingLogContext = createContext<{
   state: PingLogState;
   dispatch: React.Dispatch<PingLogAction>;
-  addPingLog: (log: PingLog) => void;
+  addPingLog: (log: PingLog) => Promise<void>;
   selectHexbin: (hexbin: HexBin | null) => void;
   toggleTowers: () => void;
   setTowers: (towers: CellTower[]) => void;
+  syncPendingLogs: () => Promise<void>;
+  fetchLogsForBounds: (bounds: MapBounds) => Promise<void>;
 } | null>(null);
 
 // Provider component
@@ -142,11 +189,51 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
     saveToStorage(STORAGE_KEYS.PENDING_SYNC, state.pendingSync);
   }, [state.pendingSync]);
 
-  // Online/offline detection
+  // Sync pending logs to server
+  const syncPendingLogs = useCallback(async () => {
+    if (state.pendingSync.length === 0) return;
+
+    const syncedIds: string[] = [];
+
+    for (const log of state.pendingSync) {
+      const success = await syncPingToServer(log);
+      if (success) {
+        syncedIds.push(log.id);
+      }
+    }
+
+    if (syncedIds.length > 0) {
+      dispatch({ type: "SYNC_COMPLETE", payload: syncedIds });
+    }
+  }, [state.pendingSync]);
+
+  // Fetch logs for a bounding box from server
+  const fetchLogsForBounds = useCallback(async (bounds: MapBounds) => {
+    if (!state.isOnline) return;
+
+    const serverLogs = await fetchPingsFromServer(bounds);
+
+    // Merge with local logs (avoid duplicates)
+    const existingIds = new Set(state.logs.map((l) => l.id));
+    const newLogs = serverLogs.filter((l) => !existingIds.has(l.id));
+
+    if (newLogs.length > 0) {
+      // Add new logs without overwriting local state completely
+      for (const log of newLogs) {
+        dispatch({ type: "ADD_LOG", payload: log });
+      }
+    }
+  }, [state.isOnline, state.logs]);
+
+  // Online/offline detection with auto-sync
   useEffect(() => {
-    const handleOnline = () => {
+    const handleOnline = async () => {
       dispatch({ type: "SET_ONLINE", payload: true });
-      // TODO: Sync pending logs when back online
+      // Automatically sync pending logs when back online
+      if (state.pendingSync.length > 0) {
+        console.log(`Syncing ${state.pendingSync.length} pending logs...`);
+        await syncPendingLogs();
+      }
     };
 
     const handleOffline = () => {
@@ -163,24 +250,32 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [state.pendingSync.length, syncPendingLogs]);
 
   // Helper functions
-  const addPingLog = (log: PingLog) => {
+  const addPingLog = useCallback(async (log: PingLog) => {
     dispatch({ type: "ADD_LOG", payload: log });
-  };
 
-  const selectHexbin = (hexbin: HexBin | null) => {
+    // If online, try to sync immediately
+    if (state.isOnline) {
+      const success = await syncPingToServer(log);
+      if (success) {
+        dispatch({ type: "SYNC_COMPLETE", payload: [log.id] });
+      }
+    }
+  }, [state.isOnline]);
+
+  const selectHexbin = useCallback((hexbin: HexBin | null) => {
     dispatch({ type: "SELECT_HEXBIN", payload: hexbin });
-  };
+  }, []);
 
-  const toggleTowers = () => {
+  const toggleTowers = useCallback(() => {
     dispatch({ type: "TOGGLE_TOWERS" });
-  };
+  }, []);
 
-  const setTowers = (towers: CellTower[]) => {
+  const setTowers = useCallback((towers: CellTower[]) => {
     dispatch({ type: "SET_TOWERS", payload: towers });
-  };
+  }, []);
 
   return (
     <PingLogContext.Provider
@@ -191,6 +286,8 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
         selectHexbin,
         toggleTowers,
         setTowers,
+        syncPendingLogs,
+        fetchLogsForBounds,
       }}
     >
       {children}

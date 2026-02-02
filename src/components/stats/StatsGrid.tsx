@@ -33,29 +33,29 @@ export default function StatsGrid({ hexbin, className }: StatsGridProps) {
 
   const stats = [
     {
-      label: "Total Scans",
+      label: "TOTAL SCANS",
       value: hexbin.pings.length.toString(),
       icon: Users,
-      color: "text-blue-400",
+      color: "text-neon-cyan",
     },
     {
-      label: "Avg. Latency",
+      label: "AVG LATENCY",
       value: `${Math.round(hexbin.avgLatency)}ms`,
       icon: Activity,
       color: `text-[${statusColor}]`,
       style: { color: statusColor },
     },
     {
-      label: "Best Provider",
+      label: "BEST ISP",
       value: hexbin.topISP,
       icon: Wifi,
-      color: "text-purple-400",
+      color: "text-neon-purple",
     },
     {
-      label: "Consistency",
+      label: "CONSISTENCY",
       value: `${hexbin.consistency}%`,
       icon: TrendingUp,
-      color: "text-green-400",
+      color: "text-neon-green",
     },
   ];
 
@@ -70,17 +70,17 @@ export default function StatsGrid({ hexbin, className }: StatsGridProps) {
         <motion.div
           key={stat.label}
           variants={itemVariants}
-          className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50"
+          className="cyber-card p-3"
         >
           <div className="flex items-center gap-2 mb-1">
             <stat.icon
               className={cn("w-4 h-4", stat.color)}
               style={stat.style}
             />
-            <span className="text-xs text-slate-400">{stat.label}</span>
+            <span className="text-xs text-muted-foreground font-mono">{stat.label}</span>
           </div>
           <p
-            className="text-lg font-semibold text-white truncate"
+            className="text-lg font-bold text-foreground truncate font-mono"
             style={stat.style}
           >
             {stat.value}

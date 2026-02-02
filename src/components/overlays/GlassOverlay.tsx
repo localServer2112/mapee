@@ -29,16 +29,16 @@ export default function GlassOverlay({
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
     >
-      {/* Backdrop */}
+      {/* Backdrop - darker, minimal blur */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80"
         onClick={onClose}
       />
 
-      {/* Glass Card */}
+      {/* Cyber Panel */}
       <motion.div
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -46,22 +46,22 @@ export default function GlassOverlay({
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className={cn(
           "relative z-10 w-full sm:max-w-md mx-4 mb-4 sm:mb-0",
-          "bg-slate-900/90 backdrop-blur-xl",
-          "border border-slate-700/50",
-          "rounded-2xl shadow-2xl",
+          "bg-cyber-black",
+          "border border-neon-cyan/20",
+          "rounded-sm shadow-2xl",
           "overflow-hidden",
           className
         )}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-cyber-border">
+            <h2 className="text-lg font-semibold text-neon-cyan font-mono">{title}</h2>
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="text-slate-400 hover:text-white"
+              className="text-muted-foreground hover:text-neon-cyan"
             >
               <X className="w-5 h-5" />
             </Button>
@@ -73,7 +73,7 @@ export default function GlassOverlay({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 z-10 text-slate-400 hover:text-white"
+            className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-neon-cyan"
             onClick={onClose}
           >
             <X className="w-5 h-5" />

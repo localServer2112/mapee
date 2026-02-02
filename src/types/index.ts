@@ -8,6 +8,8 @@ export interface PingLog {
   verifiedASN: string | null;
   latencyMs: number;
   jitter: number;
+  uploadSpeed: number; // Mbps
+  downloadSpeed: number; // Mbps
   timestamp: number;
   deviceType: DeviceType;
   userAgent: string;
@@ -28,6 +30,8 @@ export interface Coordinates {
 export interface NetworkTestResult {
   latencyMs: number;
   jitter: number;
+  uploadSpeed: number; // Mbps
+  downloadSpeed: number; // Mbps
   success: boolean;
   timestamp: number;
   samples: number[];

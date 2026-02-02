@@ -1,19 +1,17 @@
 export const ISP_LIST = [
-  "AT&T",
-  "Verizon",
-  "Comcast/Xfinity",
-  "Spectrum",
-  "T-Mobile",
-  "Cox",
-  "CenturyLink",
-  "Frontier",
-  "Optimum",
-  "Mediacom",
-  "Windstream",
-  "Google Fiber",
-  "Starlink",
-  "HughesNet",
-  "Viasat",
+  "MTN Nigeria",
+  "Airtel Nigeria",
+  "Globacom (Glo)",
+  "9mobile",
+  "Spectranet",
+  "Swift Networks",
+  "ipNX",
+  "Starlink Nigeria",
+  "Tizeti (wifi.com.ng)",
+  "Cyberspace",
+  "MainOne",
+  "Coollink",
+  "Ngcom",
   "Other",
 ] as const;
 
@@ -45,7 +43,7 @@ export const STORAGE_KEYS = {
 };
 
 export const MAP_CONFIG = {
-  DEFAULT_CENTER: [39.8283, -98.5795] as [number, number], // Center of US
+  DEFAULT_CENTER: [9.0820, 8.6753] as [number, number], // Center of Nigeria
   DEFAULT_ZOOM: 4,
   MIN_ZOOM: 3,
   MAX_ZOOM: 18,
@@ -69,4 +67,6 @@ export const API_URLS = {
   GEOCODE: "/api/geocode",
   TOWERS: "/api/towers",
   ASN: "/api/asn",
+  PINGS: "/api/pings",
+  STATS: "/api/stats",
 };

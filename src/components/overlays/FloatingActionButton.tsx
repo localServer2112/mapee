@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,35 @@ export default function FloatingActionButton({
   isOnline = true,
   className,
 }: FloatingActionButtonProps) {
+  // Prevent hydration mismatch by only rendering animations after mount
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Render static version during SSR/hydration
+  if (!mounted) {
+    return (
+      <div className={cn("fixed bottom-6 right-6 z-40", className)}>
+        <Button
+          onClick={onClick}
+          size="lg"
+          className={cn(
+            "h-14 px-6 rounded-full",
+            "bg-neon-green hover:bg-neon-green/90",
+            "text-black font-semibold font-mono",
+            "flex items-center gap-2",
+            "shadow-neon-green"
+          )}
+        >
+          <Wifi className="w-5 h-5" />
+          <span>PING</span>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
@@ -31,11 +61,12 @@ export default function FloatingActionButton({
           onClick={onClick}
           size="lg"
           className={cn(
-            "h-14 px-6 rounded-full shadow-lg",
-            "bg-ping-good hover:bg-ping-good/90",
-            "text-white font-semibold",
+            "h-14 px-6 rounded-full",
+            "bg-neon-green hover:bg-neon-green/90",
+            "text-black font-semibold font-mono",
             "flex items-center gap-2",
-            !isOnline && "bg-slate-600 hover:bg-slate-600"
+            "shadow-neon-green-lg transition-shadow",
+            !isOnline && "bg-neon-red/80 hover:bg-neon-red/70 shadow-neon-red"
           )}
         >
           <motion.div
@@ -44,17 +75,17 @@ export default function FloatingActionButton({
           >
             <Wifi className="w-5 h-5" />
           </motion.div>
-          <span>Ping My Location</span>
+          <span>PING</span>
         </Button>
       </motion.div>
 
-      {/* Pulse ring effect */}
+      {/* Pulse ring effect - cyan glow */}
       {isOnline && (
         <motion.div
-          className="absolute inset-0 rounded-full bg-ping-good/30"
+          className="absolute inset-0 rounded-full bg-neon-cyan/20"
           animate={{
             scale: [1, 1.5],
-            opacity: [0.5, 0],
+            opacity: [0.4, 0],
           }}
           transition={{
             duration: 2,

@@ -26,21 +26,23 @@ export function useNetworkTest(): UseNetworkTestReturn {
     setResult(null);
 
     try {
-      const testResult = await runNetworkTest(5, (p) => setProgress(p));
+      const testResult = await runNetworkTest(8, (p) => setProgress(p));
 
       if (!testResult.success) {
-        setError("Network test failed. Please check your connection.");
+        setError("Network test failed. Please check your connection and try again.");
       }
 
       setResult(testResult);
       return testResult;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
 
       const failedResult: NetworkTestResult = {
         latencyMs: 0,
         jitter: 0,
+        uploadSpeed: 0,
+        downloadSpeed: 0,
         success: false,
         timestamp: Date.now(),
         samples: [],

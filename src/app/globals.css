@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure full height cascade for map */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -23,29 +30,50 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --radius: 0.25rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Cyberpunk color palette */
+    /* Pure black background */
+    --background: 0 0% 2%;
+    --foreground: 180 20% 95%;
+
+    /* Card/Panel backgrounds - very dark with slight teal tint */
+    --card: 200 15% 5%;
+    --card-foreground: 180 20% 95%;
+
+    /* Popover (similar to card) */
+    --popover: 200 15% 6%;
+    --popover-foreground: 180 20% 95%;
+
+    /* Primary - Cyan (main accent) */
+    --primary: 180 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    /* Secondary - Dark panels */
+    --secondary: 200 15% 8%;
+    --secondary-foreground: 180 20% 90%;
+
+    /* Muted text and backgrounds */
+    --muted: 200 10% 12%;
+    --muted-foreground: 180 10% 50%;
+
+    /* Accent - Neon green for success states */
+    --accent: 155 100% 50%;
+    --accent-foreground: 0 0% 0%;
+
+    /* Destructive/Alert - Neon red */
+    --destructive: 345 100% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders - Thin, subtle cyan-tinted */
+    --border: 200 30% 15%;
+    --input: 200 15% 10%;
+    --ring: 180 100% 50%;
+
+    /* Angular look */
+    --radius: 0.25rem;
   }
 }
 
@@ -58,29 +86,143 @@
   }
 }
 
-/* Glassmorphism utilities */
+/* Cyberpunk utility classes */
 @layer utilities {
-  .glass {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20;
+  /* Solid dark panel (replaces glass) */
+  .cyber-panel {
+    @apply bg-[#0a0d10] border border-[#1a2632];
   }
 
-  .glass-dark {
-    @apply bg-slate-900/80 backdrop-blur-xl border border-slate-700/50;
+  /* Panel with subtle glow on hover */
+  .cyber-panel-interactive {
+    @apply cyber-panel transition-all duration-200;
+  }
+
+  .cyber-panel-interactive:hover {
+    border-color: rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+  }
+
+  /* Terminal-style card */
+  .cyber-card {
+    @apply bg-[#080a0c] border border-[#1a2632] rounded-sm;
+  }
+
+  /* Neon text glow effects */
+  .text-glow-cyan {
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.3);
+  }
+
+  .text-glow-green {
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3);
+  }
+
+  .text-glow-red {
+    text-shadow: 0 0 10px rgba(255, 51, 102, 0.5), 0 0 20px rgba(255, 51, 102, 0.3);
+  }
+
+  /* Grid pattern overlay */
+  .grid-overlay {
+    background-image:
+      linear-gradient(rgba(0, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Scanline effect (for headers) */
+  .scanlines {
+    position: relative;
+  }
+
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.05) 2px,
+      rgba(0, 0, 0, 0.05) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* Status indicator dots */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-online {
+    @apply status-dot bg-neon-green;
+    box-shadow: 0 0 6px rgba(0, 255, 136, 0.8);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .status-dot-offline {
+    @apply status-dot bg-neon-red;
+    box-shadow: 0 0 6px rgba(255, 51, 102, 0.8);
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 6px rgba(0, 255, 136, 0.8);
+    }
+    50% {
+      box-shadow: 0 0 12px rgba(0, 255, 136, 1);
+    }
+  }
+
+  /* Neon border glow */
+  .border-glow-cyan {
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0, 255, 255, 0.05);
+  }
+
+  .border-glow-green {
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3), inset 0 0 10px rgba(0, 255, 136, 0.05);
   }
 }
 
-/* Leaflet overrides for dark mode */
+/* Leaflet overrides for cyberpunk dark mode */
 .dark .leaflet-container {
-  background-color: #1a1a2e;
+  background-color: #050505;
 }
 
 .dark .leaflet-popup-content-wrapper {
-  background-color: #1e293b;
-  color: white;
+  background-color: #0a0d10;
+  color: #00FFFF;
+  border: 1px solid #1a2632;
+  border-radius: 2px;
 }
 
 .dark .leaflet-popup-tip {
-  background-color: #1e293b;
+  background-color: #0a0d10;
+  border-left: 1px solid #1a2632;
+  border-bottom: 1px solid #1a2632;
+}
+
+.dark .leaflet-control-zoom {
+  border: 1px solid #1a2632 !important;
+  background: #0a0d10 !important;
+}
+
+.dark .leaflet-control-zoom a {
+  background-color: #0a0d10 !important;
+  color: #00FFFF !important;
+  border-bottom: 1px solid #1a2632 !important;
+}
+
+.dark .leaflet-control-zoom a:hover {
+  background-color: #1a2632 !important;
+}
+
+.dark .leaflet-control-attribution {
+  background: rgba(5, 5, 5, 0.8) !important;
+  color: #4a5568 !important;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #00FFFF !important;
 }
 
 /* Custom marker styles */
@@ -96,14 +238,190 @@
   z-index: 0;
 }
 
-/* Hexbin layer styles */
+/* Hexbin layer styles - updated for cyberpunk */
 .hexbin-hexagon {
-  stroke: rgba(255, 255, 255, 0.3);
+  stroke: rgba(0, 255, 255, 0.2);
   stroke-width: 1px;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, stroke 0.2s ease;
 }
 
 .hexbin-hexagon:hover {
-  opacity: 0.8;
+  opacity: 0.9;
+  stroke: rgba(0, 255, 255, 0.5);
   cursor: pointer;
+}
+
+/* Custom scrollbar for cyberpunk theme */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0a0d10;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #1a2632;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #2a3642;
+}
+
+/* Hexbin tooltip styles */
+.hexbin-tooltip {
+  background-color: #0a0d10 !important;
+  border: 1px solid #1a2632 !important;
+  border-radius: 4px !important;
+  padding: 0 !important;
+  font-family: ui-monospace, monospace !important;
+}
+
+.hexbin-tooltip .leaflet-tooltip-content {
+  margin: 0;
+}
+
+.hexbin-tooltip-content {
+  padding: 8px 12px;
+  background: #0a0d10;
+}
+
+/* Selected hexbin highlight */
+.hexbin-selected {
+  stroke: #00FFFF !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.5));
+}
+
+/* Marker cluster styles */
+.custom-cluster-icon {
+  background: transparent !important;
+}
+
+.cluster-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, monospace;
+  font-weight: bold;
+  font-size: 12px;
+  color: #000;
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+.cluster-icon.cluster-small {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, #00FF88, #00FFFF);
+}
+
+.cluster-icon.cluster-medium {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #FFD600, #00FFFF);
+}
+
+.cluster-icon.cluster-large {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #FF3366, #00FFFF);
+}
+
+/* Heatmap layer */
+.leaflet-heatmap-layer {
+  mix-blend-mode: screen;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 1023px) {
+  .hexbin-tooltip {
+    font-size: 11px !important;
+  }
+
+  .cluster-icon {
+    font-size: 10px;
+  }
+
+  .cluster-icon.cluster-small {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cluster-icon.cluster-medium {
+    width: 30px;
+    height: 30px;
+  }
+
+  .cluster-icon.cluster-large {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) {
+  .hexbin-hexagon {
+    stroke-width: 2px;
+  }
+
+  .cyber-panel-interactive:active {
+    border-color: rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+  }
+}
+
+/* Pulse animation for user location */
+@keyframes location-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.user-location-pulse {
+  animation: location-pulse 2s ease-out infinite;
+}
+
+/* Progress bar glow */
+.progress-glow {
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Modal backdrop blur */
+.modal-backdrop {
+  backdrop-filter: blur(4px);
+}
+
+/* Safe area padding for mobile devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .status-dot-online,
+  .user-location-pulse {
+    animation: none !important;
+  }
 }

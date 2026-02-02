@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 interface SuccessStepProps {
   latencyMs: number;
   jitter: number;
+  uploadSpeed: number;
+  downloadSpeed: number;
   isp: string;
   onConfirm: () => void;
 }
@@ -16,6 +18,8 @@ interface SuccessStepProps {
 export default function SuccessStep({
   latencyMs,
   jitter,
+  uploadSpeed,
+  downloadSpeed,
   isp,
   onConfirm,
 }: SuccessStepProps) {
@@ -25,12 +29,12 @@ export default function SuccessStep({
   const label = getLatencyLabel(status);
 
   const handleShare = async () => {
-    const shareText = `I just tested my network with Mapee! ${isp}: ${latencyMs}ms (${label}) 📶`;
+    const shareText = `I just tested my network with MAPEE! ${isp}: ${latencyMs}ms (${label})`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Mapee Network Test",
+          title: "MAPEE Network Test",
           text: shareText,
           url: window.location.href,
         });
@@ -58,17 +62,17 @@ export default function SuccessStep({
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", delay: 0.2 }}
-        className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-        style={{ backgroundColor: `${color}20` }}
+        className="w-20 h-20 rounded-sm flex items-center justify-center mb-6 border"
+        style={{ backgroundColor: `${color}15`, borderColor: `${color}50` }}
       >
         <CheckCircle className="w-12 h-12" style={{ color }} />
       </motion.div>
 
       {/* Title */}
-      <h2 className="text-xl font-semibold text-white mb-2 text-center">
-        Test Complete!
+      <h2 className="text-xl font-bold text-foreground mb-2 text-center font-mono">
+        TEST COMPLETE
       </h2>
-      <p className="text-sm text-slate-400 mb-6 text-center">
+      <p className="text-sm text-muted-foreground mb-6 text-center">
         Your data helps improve network visibility
       </p>
 
@@ -77,28 +81,36 @@ export default function SuccessStep({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="w-full p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 mb-6"
+        className="w-full p-4 cyber-card mb-6"
       >
         {/* Latency */}
         <div className="text-center mb-4">
-          <p className="text-5xl font-bold" style={{ color }}>
+          <p className="text-5xl font-bold font-mono" style={{ color }}>
             {latencyMs}
             <span className="text-2xl">ms</span>
           </p>
-          <p className="text-sm mt-1" style={{ color }}>
-            {label} Connection
+          <p className="text-sm mt-1 font-mono" style={{ color }}>
+            {label.toUpperCase()} CONNECTION
           </p>
         </div>
 
         {/* Details */}
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-slate-900/50 rounded-lg p-3">
-            <p className="text-slate-400 text-xs mb-1">ISP</p>
-            <p className="text-white font-medium truncate">{isp}</p>
+          <div className="bg-cyber-dark rounded-sm p-3 border border-cyber-border">
+            <p className="text-muted-foreground text-xs mb-1 font-mono">ISP</p>
+            <p className="text-foreground font-bold truncate font-mono">{isp}</p>
           </div>
-          <div className="bg-slate-900/50 rounded-lg p-3">
-            <p className="text-slate-400 text-xs mb-1">Jitter</p>
-            <p className="text-white font-medium">±{jitter}ms</p>
+          <div className="bg-cyber-dark rounded-sm p-3 border border-cyber-border">
+            <p className="text-muted-foreground text-xs mb-1 font-mono">JITTER</p>
+            <p className="text-foreground font-bold font-mono">±{jitter}ms</p>
+          </div>
+          <div className="bg-cyber-dark rounded-sm p-3 border border-cyber-border">
+            <p className="text-muted-foreground text-xs mb-1 font-mono">DOWNLOAD</p>
+            <p className="text-foreground font-bold font-mono">{downloadSpeed} Mbps</p>
+          </div>
+          <div className="bg-cyber-dark rounded-sm p-3 border border-cyber-border">
+            <p className="text-muted-foreground text-xs mb-1 font-mono">UPLOAD</p>
+            <p className="text-foreground font-bold font-mono">{uploadSpeed} Mbps</p>
           </div>
         </div>
       </motion.div>
@@ -107,19 +119,19 @@ export default function SuccessStep({
       <div className="w-full space-y-3">
         <Button
           onClick={onConfirm}
-          className="w-full bg-ping-good hover:bg-ping-good/90 text-white"
+          className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono"
         >
           <MapPin className="w-4 h-4 mr-2" />
-          Add to Map
+          ADD TO MAP
         </Button>
 
         <Button
-          variant="outline"
+          variant="cyber"
           onClick={handleShare}
-          className="w-full border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+          className="w-full font-mono"
         >
           <Share2 className="w-4 h-4 mr-2" />
-          Share to Community
+          SHARE RESULT
         </Button>
       </div>
 
@@ -128,9 +140,9 @@ export default function SuccessStep({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="text-xs text-slate-500 mt-6 text-center"
+        className="text-xs text-muted-foreground mt-6 text-center font-mono"
       >
-        Thank you for contributing to the network map! 🌐
+        THANK YOU FOR CONTRIBUTING TO THE NETWORK MAP
       </motion.p>
     </motion.div>
   );

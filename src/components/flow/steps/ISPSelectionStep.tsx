@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ISP_LIST } from "@/lib/constants";
 import { useASNLookup } from "@/hooks/useASNLookup";
+import { detectISP } from "@/lib/isp-verification";
 import { cn } from "@/lib/utils";
 
 interface ISPSelectionStepProps {
@@ -20,8 +21,21 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
 
   // Auto-detect ISP on mount
   useEffect(() => {
-    lookup();
+    const detect = async () => {
+      const info = await lookup();
+      if (info) {
+        const detected = detectISP(info);
+        if (detected) {
+          // Auto-select and verified match found
+          setSelectedISP(detected);
+        }
+      }
+    };
+    detect();
   }, [lookup]);
+
+  const detectedISP = asnInfo ? detectISP(asnInfo) : null;
+  const isVerified = !!detectedISP;
 
   // Filter ISPs based on search query
   const filteredISPs = ISP_LIST.filter((isp) =>
@@ -44,10 +58,10 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
       animate={{ opacity: 1, y: 0 }}
       className="py-4"
     >
-      <h2 className="text-xl font-semibold text-white mb-2 text-center">
-        Select Your ISP
+      <h2 className="text-xl font-bold text-foreground mb-2 text-center font-mono">
+        SELECT ISP
       </h2>
-      <p className="text-sm text-slate-400 mb-4 text-center">
+      <p className="text-sm text-muted-foreground mb-4 text-center">
         Choose your internet service provider
       </p>
 
@@ -56,28 +70,52 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
+          className={cn(
+            "mb-4 p-3 border rounded-sm",
+            isVerified
+              ? "bg-neon-green/10 border-neon-green/30"
+              : "bg-amber-500/10 border-amber-500/30"
+          )}
         >
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex flex-col gap-2 text-sm">
             {isDetecting ? (
-              <>
-                <Loader2 className="w-4 h-4 text-ping-good animate-spin" />
-                <span className="text-slate-400">Detecting your ISP...</span>
-              </>
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-neon-cyan animate-spin" />
+                <span className="text-muted-foreground font-mono">VERIFYING CONNECTION...</span>
+              </div>
             ) : asnInfo ? (
-              <>
-                <Wifi className="w-4 h-4 text-ping-good" />
-                <span className="text-slate-400">Detected:</span>
-                <span className="text-white font-medium">{asnInfo.isp}</span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-ping-good p-0 h-auto ml-auto"
-                  onClick={() => handleSelect(asnInfo.isp)}
-                >
-                  Use this
-                </Button>
-              </>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isVerified ? (
+                      <Check className="w-4 h-4 text-neon-green" />
+                    ) : (
+                      <Wifi className="w-4 h-4 text-amber-500" />
+                    )}
+                    <span className="text-muted-foreground font-mono text-xs uppercase">
+                      {isVerified ? "VERIFIED ISP DETECTED" : "UNVERIFIED CONNECTION"}
+                    </span>
+                  </div>
+                  {isVerified && (
+                    <span className="px-2 py-0.5 bg-neon-green/20 text-neon-green text-[10px] font-bold rounded-sm border border-neon-green/30">
+                      LOCKED
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-foreground font-bold font-mono text-lg">
+                    {isVerified ? detectedISP : asnInfo.isp}
+                  </span>
+                </div>
+
+                {!isVerified && (
+                  <p className="text-amber-500 text-xs mt-1">
+                    Your connection ({asnInfo.isp}) does not match our listed providers.
+                    Please ensure you are connected to the correct network.
+                  </p>
+                )}
+              </div>
             ) : null}
           </div>
         </motion.div>
@@ -85,13 +123,13 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
 
       {/* Search input */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-cyan" />
         <Input
           type="text"
           placeholder="Search ISPs..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 bg-slate-800/50 border-slate-700 text-white"
+          className="pl-9 font-mono"
         />
       </div>
 
@@ -105,23 +143,27 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
             transition={{ delay: index * 0.03 }}
             onClick={() => handleSelect(isp)}
             className={cn(
-              "w-full px-4 py-2.5 rounded-lg text-left text-sm transition-colors",
+              "w-full px-4 py-2.5 rounded-sm text-left text-sm transition-colors font-mono",
               "flex items-center justify-between",
               selectedISP === isp
-                ? "bg-ping-good/20 text-white border border-ping-good/50"
-                : "bg-slate-800/30 text-slate-300 hover:bg-slate-700/50 border border-transparent"
+                ? "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/50"
+                : "bg-cyber-dark text-muted-foreground border border-transparent",
+              !isVerified && selectedISP !== isp && "hover:bg-cyber-border",
+              // Disable other options if verified
+              isVerified && selectedISP !== isp && "opacity-30 cursor-not-allowed hover:bg-transparent"
             )}
+            disabled={isVerified && selectedISP !== isp}
           >
             <span>{isp}</span>
             {selectedISP === isp && (
-              <Check className="w-4 h-4 text-ping-good" />
+              <Check className="w-4 h-4 text-neon-cyan" />
             )}
           </motion.button>
         ))}
 
         {filteredISPs.length === 0 && (
-          <div className="text-center py-4 text-slate-400 text-sm">
-            No ISPs found. Try a different search.
+          <div className="text-center py-4 text-muted-foreground text-sm font-mono">
+            NO ISPs FOUND
           </div>
         )}
       </div>
@@ -130,9 +172,9 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
       <Button
         onClick={handleContinue}
         disabled={!selectedISP}
-        className="w-full bg-ping-good hover:bg-ping-good/90 text-white disabled:opacity-50"
+        className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono disabled:opacity-50"
       >
-        Continue
+        CONTINUE
       </Button>
     </motion.div>
   );

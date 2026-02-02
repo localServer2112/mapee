@@ -35,8 +35,8 @@ export default function ISPRankingChart({
 
   if (rankings.length === 0) {
     return (
-      <div className={cn("text-center text-slate-400 py-4", className)}>
-        No ISP data available
+      <div className={cn("text-center text-muted-foreground py-4 font-mono", className)}>
+        NO ISP DATA AVAILABLE
       </div>
     );
   }
@@ -51,8 +51,8 @@ export default function ISPRankingChart({
       animate="visible"
       className={cn("space-y-3", className)}
     >
-      <h4 className="text-sm font-medium text-slate-300 mb-3">
-        ISP Rankings (Fastest First)
+      <h4 className="text-sm font-medium text-neon-cyan font-mono mb-3">
+        ISP RANKINGS
       </h4>
 
       {rankings.map((ranking, index) => {
@@ -64,17 +64,17 @@ export default function ISPRankingChart({
           <motion.div key={ranking.isp} variants={itemVariants}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500 w-5">
+                <span className="text-xs font-bold text-muted-foreground w-5 font-mono">
                   #{index + 1}
                 </span>
-                <span className="text-sm text-white truncate max-w-[120px]">
+                <span className="text-sm text-foreground truncate max-w-[120px] font-mono">
                   {ranking.isp}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400">{ranking.count} scans</span>
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <span className="text-muted-foreground">{ranking.count} scans</span>
                 <span
-                  className="font-semibold"
+                  className="font-bold"
                   style={{ color }}
                 >
                   {ranking.avgLatency}ms
@@ -82,13 +82,13 @@ export default function ISPRankingChart({
               </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            {/* Progress bar - angular style */}
+            <div className="h-1.5 bg-cyber-border rounded-none overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${barWidth}%` }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="h-full rounded-full"
+                className="h-full rounded-none"
                 style={{ backgroundColor: color }}
               />
             </div>

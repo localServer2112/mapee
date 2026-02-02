@@ -27,7 +27,7 @@ export function useGeocode(): UseGeocodeReturn {
     setError(null);
 
     try {
-      const params = new URLSearchParams({ q: query });
+      const params = new URLSearchParams({ q: query, countrycodes: "ng" });
       const response = await fetch(`${API_URLS.GEOCODE}?${params}`);
 
       if (!response.ok) {

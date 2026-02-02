@@ -11,10 +11,10 @@ interface FlowProgressProps {
 }
 
 const steps: { key: FlowStep; label: string }[] = [
-  { key: "location", label: "Location" },
+  { key: "location", label: "LOC" },
   { key: "isp", label: "ISP" },
-  { key: "testing", label: "Test" },
-  { key: "success", label: "Done" },
+  { key: "testing", label: "TEST" },
+  { key: "success", label: "DONE" },
 ];
 
 export default function FlowProgress({
@@ -37,26 +37,28 @@ export default function FlowProgress({
               animate={{
                 scale: isCurrent ? 1.1 : 1,
                 backgroundColor: isComplete
-                  ? "#22c55e"
+                  ? "#00FF88"
                   : isCurrent
-                  ? "#22c55e"
-                  : "#334155",
+                  ? "#00FFFF"
+                  : "#1a2632",
               }}
               className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center",
-                "border-2 transition-colors",
-                isComplete || isCurrent
-                  ? "border-ping-good"
-                  : "border-slate-600"
+                "w-8 h-8 rounded-sm flex items-center justify-center",
+                "border transition-colors font-mono",
+                isComplete
+                  ? "border-neon-green"
+                  : isCurrent
+                  ? "border-neon-cyan"
+                  : "border-cyber-border"
               )}
             >
               {isComplete ? (
-                <Check className="w-4 h-4 text-white" />
+                <Check className="w-4 h-4 text-black" />
               ) : (
                 <span
                   className={cn(
-                    "text-sm font-medium",
-                    isCurrent ? "text-white" : "text-slate-400"
+                    "text-sm font-bold",
+                    isCurrent ? "text-black" : "text-muted-foreground"
                   )}
                 >
                   {index + 1}
@@ -67,8 +69,8 @@ export default function FlowProgress({
             {/* Step label */}
             <span
               className={cn(
-                "ml-2 text-xs hidden sm:block",
-                isCurrent ? "text-white font-medium" : "text-slate-400"
+                "ml-2 text-xs hidden sm:block font-mono",
+                isCurrent ? "text-neon-cyan font-medium" : "text-muted-foreground"
               )}
             >
               {step.label}
@@ -76,11 +78,11 @@ export default function FlowProgress({
 
             {/* Connector line */}
             {index < steps.length - 1 && (
-              <div className="w-8 sm:w-12 h-0.5 mx-2 sm:mx-4 bg-slate-600 overflow-hidden">
+              <div className="w-8 sm:w-12 h-px mx-2 sm:mx-4 bg-cyber-border overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: isComplete ? "100%" : "0%" }}
-                  className="h-full bg-ping-good"
+                  className="h-full bg-neon-green"
                 />
               </div>
             )}

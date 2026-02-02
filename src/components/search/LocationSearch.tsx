@@ -67,7 +67,7 @@ export default function LocationSearch({
   return (
     <div className={cn("relative", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-cyan" />
         <Input
           ref={inputRef}
           type="text"
@@ -76,10 +76,10 @@ export default function LocationSearch({
           onChange={(e) => setQuery(e.target.value)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="pl-9 pr-9 bg-slate-800/80 backdrop-blur-sm border-slate-700 text-white placeholder:text-slate-400"
+          className="pl-9 pr-9 bg-cyber-dark border-cyber-border text-foreground placeholder:text-muted-foreground font-mono"
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-cyan animate-spin" />
         )}
       </div>
 
@@ -89,7 +89,7 @@ export default function LocationSearch({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-slate-800/95 backdrop-blur-xl border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50"
+            className="absolute top-full left-0 right-0 mt-2 cyber-panel rounded-sm shadow-xl overflow-hidden z-50"
           >
             {results.map((result, index) => (
               <motion.button
@@ -98,14 +98,14 @@ export default function LocationSearch({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 onClick={() => handleSelect(result)}
-                className="w-full px-4 py-3 flex items-start gap-3 hover:bg-slate-700/50 transition-colors text-left"
+                className="w-full px-4 py-3 flex items-start gap-3 hover:bg-cyber-border transition-colors text-left border-b border-cyber-border last:border-b-0"
               >
-                <MapPin className="w-4 h-4 text-ping-good mt-0.5 flex-shrink-0" />
+                <MapPin className="w-4 h-4 text-neon-green mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white truncate">
+                  <p className="text-sm text-foreground truncate font-mono">
                     {result.displayName.split(",")[0]}
                   </p>
-                  <p className="text-xs text-slate-400 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {result.displayName.split(",").slice(1).join(",").trim()}
                   </p>
                 </div>

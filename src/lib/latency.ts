@@ -15,9 +15,9 @@ export function getLatencyStatus(latencyMs: number): LatencyStatus {
  */
 export function getLatencyColor(status: LatencyStatus): string {
   const colors = {
-    good: "#22c55e", // ping-good (green)
-    fair: "#eab308", // ping-fair (yellow)
-    poor: "#ef4444", // ping-poor (red)
+    good: "#00FF88", // neon-green
+    fair: "#FFD600", // neon-yellow
+    poor: "#FF3366", // neon-red
   };
   return colors[status];
 }

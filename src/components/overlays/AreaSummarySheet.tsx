@@ -35,19 +35,19 @@ export default function AreaSummarySheet({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="bottom"
-        className="h-[85vh] bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 rounded-t-3xl"
+        className="h-[85vh] bg-cyber-black border-t border-neon-cyan/30 rounded-t-sm"
       >
-        <SheetHeader className="pb-4 border-b border-slate-700/50">
+        <SheetHeader className="pb-4 border-b border-cyber-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-ping-good/20 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-ping-good" />
+              <div className="w-10 h-10 rounded-sm bg-neon-green/10 flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-neon-green" />
               </div>
               <div>
-                <SheetTitle className="text-white text-lg">
-                  Network Health
+                <SheetTitle className="text-neon-cyan text-lg font-mono">
+                  NETWORK HEALTH
                 </SheetTitle>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground font-mono">
                   {hexbin.pings.length} scans in this area
                 </p>
               </div>
@@ -56,7 +56,7 @@ export default function AreaSummarySheet({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="text-slate-400 hover:text-white"
+              className="text-muted-foreground hover:text-neon-cyan"
             >
               <X className="w-5 h-5" />
             </Button>
@@ -83,14 +83,14 @@ export default function AreaSummarySheet({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.3 }}
-                className="p-4 bg-slate-800/50 rounded-lg border border-slate-700/50"
+                className="p-4 cyber-card"
               >
-                <p className="text-sm text-slate-300">
-                  <span className="font-semibold text-white">
+                <p className="text-sm text-muted-foreground font-mono">
+                  <span className="font-bold text-foreground">
                     {hexbin.consistency}%
                   </span>{" "}
                   of users reported{" "}
-                  <span className="font-semibold text-ping-good">
+                  <span className="font-bold text-neon-green">
                     {statusLabel}
                   </span>{" "}
                   signal quality in this area.
@@ -105,7 +105,7 @@ export default function AreaSummarySheet({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="text-xs text-slate-500 text-center pt-4 border-t border-slate-700/50"
+                className="text-xs text-muted-foreground text-center pt-4 border-t border-cyber-border font-mono"
               >
                 Based on {hexbin.pings.length} scan
                 {hexbin.pings.length !== 1 ? "s" : ""} from the community
