@@ -2,9 +2,9 @@
 
 import { MapContainer, TileLayer, useMapEvents, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useCallback, useMemo, useEffect, useRef } from "react";
 import L from "leaflet";
-import { PingLog, HexBin, CellTower, MapBounds, GeocodeResult } from "@/types";
+import { PingLog, HexBin, CellTower, MapBounds } from "@/types";
 import { MAP_CONFIG } from "@/lib/constants";
 import { createHexbins } from "@/lib/hexbin";
 import { findNearestTowers } from "@/lib/towers";
@@ -40,6 +40,7 @@ interface LeafletMapProps {
   onBoundsChange?: (bounds: MapBounds, center: [number, number], zoom: number) => void;
   onHexbinClick?: (hexbin: HexBin) => void;
   onMarkerClick?: (log: PingLog) => void;
+  onMapReady?: (mapMethods: MapRef) => void;
 }
 
 /**
@@ -67,6 +68,28 @@ function MapEventHandler({
 }: {
   onBoundsChange?: (bounds: MapBounds, center: [number, number], zoom: number) => void;
 }) {
+  const map = useMap();
+
+  // Fire initial bounds when map is ready
+  useEffect(() => {
+    if (map && onBoundsChange) {
+      const bounds = map.getBounds();
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+
+      onBoundsChange(
+        {
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        },
+        [center.lat, center.lng],
+        zoom
+      );
+    }
+  }, [map, onBoundsChange]);
+
   useMapEvents({
     moveend: (e) => {
       const map = e.target;
@@ -107,26 +130,25 @@ function MapEventHandler({
   return null;
 }
 
-const LeafletMap = forwardRef<MapRef, LeafletMapProps>(function LeafletMap(
-  {
-    pingLogs,
-    towers,
-    showTowers,
-    selectedHexbin,
-    userLocation,
-    isTestingActive = false,
-    showHeatmap = false,
-    onBoundsChange,
-    onHexbinClick,
-    onMarkerClick,
-  },
-  ref
-) {
+function LeafletMap({
+  pingLogs,
+  towers,
+  showTowers,
+  selectedHexbin,
+  userLocation,
+  isTestingActive = false,
+  showHeatmap = false,
+  onBoundsChange,
+  onHexbinClick,
+  onMarkerClick,
+  onMapReady,
+}: LeafletMapProps) {
   // Store map reference
-  const mapRef = useMemo<{ current: L.Map | null }>(() => ({ current: null }), []);
+  const mapRef = useRef<L.Map | null>(null);
+  const mapMethodsCallbackFired = useRef(false);
 
-  // Expose methods via ref
-  useImperativeHandle(ref, () => ({
+  // Create stable map methods object
+  const mapMethods = useMemo<MapRef>(() => ({
     flyTo: (lat: number, lng: number, zoom: number = 14) => {
       if (mapRef.current) {
         mapRef.current.flyTo([lat, lng], zoom, {
@@ -144,7 +166,7 @@ const LeafletMap = forwardRef<MapRef, LeafletMapProps>(function LeafletMap(
       }
     },
     getMap: () => mapRef.current,
-  }));
+  }), []);
 
   // Generate hexbins from ping logs
   const hexbins = useMemo(() => createHexbins(pingLogs), [pingLogs]);
@@ -170,7 +192,12 @@ const LeafletMap = forwardRef<MapRef, LeafletMapProps>(function LeafletMap(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleMapReady = useCallback((map: L.Map) => {
     mapRef.current = map;
-  }, []); // mapRef is intentionally stable and not a dependency
+    // Notify parent that map is ready with methods
+    if (!mapMethodsCallbackFired.current && onMapReady) {
+      mapMethodsCallbackFired.current = true;
+      onMapReady(mapMethods);
+    }
+  }, [onMapReady, mapMethods]); // mapRef is intentionally stable and not a dependency
 
   // Get selected hexbin ID for highlighting
   const selectedHexbinId = selectedHexbin
@@ -263,6 +290,6 @@ const LeafletMap = forwardRef<MapRef, LeafletMapProps>(function LeafletMap(
       )}
     </MapContainer>
   );
-});
+}
 
 export default LeafletMap;

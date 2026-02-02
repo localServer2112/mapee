@@ -1,22 +1,10 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { forwardRef } from "react";
 import { PingLog, HexBin, CellTower, MapBounds } from "@/types";
-import type { MapRef } from "./LeafletMap";
+import LeafletMap, { type MapRef } from "./LeafletMap";
 
-// Dynamic import with SSR disabled - Leaflet requires browser APIs
-const LeafletMap = dynamic(() => import("./LeafletMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-cyber-black flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-neon-green border-t-transparent rounded-full animate-spin" />
-        <span className="text-muted-foreground text-sm font-mono">Initializing map...</span>
-      </div>
-    </div>
-  ),
-});
+// This component is dynamically imported in page.tsx with ssr: false.
+// We use a callback pattern for map methods since dynamic() doesn't forward refs.
 
 interface MapContainerProps {
   pingLogs: PingLog[];
@@ -29,13 +17,11 @@ interface MapContainerProps {
   onBoundsChange?: (bounds: MapBounds, center: [number, number], zoom: number) => void;
   onHexbinClick?: (hexbin: HexBin) => void;
   onMarkerClick?: (log: PingLog) => void;
+  onMapReady?: (mapMethods: MapRef) => void;
 }
 
-const MapContainerWrapper = forwardRef<MapRef, MapContainerProps>(
-  function MapContainerWrapper(props, ref) {
-    return <LeafletMap ref={ref} {...props} />;
-  }
-);
+export default function MapContainerWrapper(props: MapContainerProps) {
+  return <LeafletMap {...props} />;
+}
 
-export default MapContainerWrapper;
 export type { MapRef };

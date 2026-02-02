@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { usePingLogStore } from "@/stores/pingLogStore";
 import { useMapBounds } from "@/hooks/useMapBounds";
 import { useNearbyTowers } from "@/hooks/useNearbyTowers";
 import { useOnlineStatus } from "@/hooks/useOfflineCache";
+import { useLocationWaterfall } from "@/hooks/useLocationWaterfall";
 import { PingLog, HexBin, Coordinates, MapBounds, GeocodeResult } from "@/types";
 import FloatingActionButton from "@/components/overlays/FloatingActionButton";
 import NetworkTestFlow from "@/components/flow/NetworkTestFlow";
@@ -14,13 +15,23 @@ import AreaSummarySheet from "@/components/overlays/AreaSummarySheet";
 import LocationSearch from "@/components/search/LocationSearch";
 import HeaderBar from "@/components/layout/HeaderBar";
 import { Button } from "@/components/ui/button";
-import { Radio, Layers, Menu, X, Map as MapIcon, Activity } from "lucide-react";
+import { Radio, Layers, Menu, X, Map as MapIcon, Activity, Navigation, Loader2 } from "lucide-react";
 import type { MapRef } from "@/components/map/MapContainer";
 
 // Dynamic import for the map (SSR disabled)
 const MapContainer = dynamic(
   () => import("@/components/map/MapContainer"),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-cyber-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-neon-green border-t-transparent rounded-full animate-spin" />
+          <span className="text-muted-foreground text-sm font-mono">Initializing map...</span>
+        </div>
+      </div>
+    ),
+  }
 );
 
 export default function HomePage() {
@@ -32,14 +43,32 @@ export default function HomePage() {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Map ref for navigation
-  const mapRef = useRef<MapRef>(null);
+  // Map methods for navigation (received via callback since dynamic() doesn't forward refs)
+  const mapMethodsRef = useRef<MapRef | null>(null);
+
+  const handleMapReady = useCallback((methods: MapRef) => {
+    mapMethodsRef.current = methods;
+  }, []);
 
   // Hooks
   const { state, addPingLog, selectHexbin, toggleTowers, setTowers, fetchLogsForBounds } = usePingLogStore();
-  const { bounds, updateBounds } = useMapBounds();
+  const { bounds, zoom, updateBounds } = useMapBounds();
   const { fetchTowers } = useNearbyTowers();
   const isOnline = useOnlineStatus();
+  const { ipLocation, locationSource } = useLocationWaterfall();
+
+  // Track if we've already centered on IP location
+  const hasInitialCentered = useRef(false);
+
+  // Center map on IP location when it becomes available (only once)
+  useEffect(() => {
+    if (ipLocation && mapMethodsRef.current && !hasInitialCentered.current) {
+      hasInitialCentered.current = true;
+      // Fly to IP location at city zoom level
+      mapMethodsRef.current.flyTo(ipLocation.lat, ipLocation.lng, 10);
+      console.log("[HomePage] Centered map on IP location");
+    }
+  }, [ipLocation]);
 
   // Fetch server data when bounds change (debounced)
   useEffect(() => {
@@ -76,11 +105,11 @@ export default function HomePage() {
   }, [selectHexbin]);
 
   const handleBoundsChange = useCallback(
-    async (newBounds: MapBounds, center: [number, number], zoom: number) => {
-      updateBounds(newBounds, center, zoom);
+    async (newBounds: MapBounds, center: [number, number], newZoom: number) => {
+      updateBounds(newBounds, center, newZoom);
 
-      // Fetch towers if enabled and zoomed in enough
-      if (state.showTowers && zoom >= 10) {
+      // Fetch towers if enabled (towers show at any zoom, API handles filtering)
+      if (state.showTowers) {
         const towers = await fetchTowers(newBounds);
         setTowers(towers);
       }
@@ -89,12 +118,18 @@ export default function HomePage() {
   );
 
   const handleToggleTowers = useCallback(async () => {
+    // Check the current state BEFORE toggling
+    const willEnableTowers = !state.showTowers;
+
     toggleTowers();
 
     // Fetch towers if enabling and we have bounds
-    if (!state.showTowers && bounds) {
+    if (willEnableTowers && bounds) {
       const towers = await fetchTowers(bounds);
       setTowers(towers);
+    } else if (!willEnableTowers) {
+      // Clear towers when disabling
+      setTowers([]);
     }
   }, [toggleTowers, state.showTowers, bounds, fetchTowers, setTowers]);
 
@@ -104,17 +139,17 @@ export default function HomePage() {
 
   const handleLocationSearch = useCallback((result: GeocodeResult) => {
     // Fly to the searched location
-    if (mapRef.current) {
+    if (mapMethodsRef.current) {
       if (result.boundingBox && result.boundingBox.length === 4) {
         // Use bounding box for area searches
         const [south, north, west, east] = result.boundingBox;
-        mapRef.current.flyToBounds([
+        mapMethodsRef.current.flyToBounds([
           [south, west],
           [north, east],
         ]);
       } else {
         // Fly to point for specific locations
-        mapRef.current.flyTo(result.lat, result.lng, 14);
+        mapMethodsRef.current.flyTo(result.lat, result.lng, 14);
       }
     }
     // Close mobile sidebar after search
@@ -124,8 +159,8 @@ export default function HomePage() {
   const handleLocationChange = useCallback((coords: Coordinates | null) => {
     setUserLocation(coords);
     // Center map on user location
-    if (coords && mapRef.current) {
-      mapRef.current.flyTo(coords.lat, coords.lng, 15);
+    if (coords && mapMethodsRef.current) {
+      mapMethodsRef.current.flyTo(coords.lat, coords.lng, 15);
     }
   }, []);
 
@@ -139,7 +174,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="relative h-screen w-full overflow-hidden bg-cyber-black">
+    <main className="relative h-screen w-full overflow-hidden bg-cyber-black pt-12">
       {/* Header Bar */}
       <HeaderBar isOnline={isOnline} scanCount={state.logs.length} />
 
@@ -153,20 +188,42 @@ export default function HomePage() {
       </button>
 
       {/* Main Content Area - Flex Container */}
-      <div className="flex h-[calc(100vh-48px)] overflow-hidden">
+      <div className="flex h-full overflow-hidden">
 
         {/* Left Side - Map (Flexible Width) */}
         <div className="flex-1 relative z-0">
-          {/* Map Controls Overlay (Top Right of Map) */}
-          <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+          {/* Location Indicator (Top Left of Map) */}
+          {locationSource !== "none" && (
+            <div className="absolute top-4 left-4 z-10">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-cyber-dark/90 backdrop-blur-sm border border-cyber-border rounded-sm">
+                {locationSource === "searching" ? (
+                  <Loader2 className="w-3 h-3 text-neon-yellow animate-spin" />
+                ) : (
+                  <Navigation className="w-3 h-3 text-neon-cyan" />
+                )}
+                <span className="text-xs font-mono text-muted-foreground">
+                  {locationSource === "searching"
+                    ? "Locating..."
+                    : locationSource === "gps"
+                    ? "GPS"
+                    : locationSource === "ip"
+                    ? "Network"
+                    : ""}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Map Controls Overlay (Bottom Left of Map) */}
+          <div className="absolute bottom-6 left-4 z-10 flex flex-col gap-2">
             <Button
               variant="outline"
               size="icon"
               onClick={handleToggleTowers}
               title={state.showTowers ? "Hide cell towers" : "Show cell towers"}
               className={`
-                bg-cyber-dark border-cyber-border
-                ${state.showTowers ? "text-neon-purple border-neon-purple" : "text-muted-foreground"}
+                bg-cyber-dark/90 backdrop-blur-sm border-cyber-border
+                ${state.showTowers ? "text-neon-purple border-neon-purple shadow-neon-cyan" : "text-muted-foreground"}
                 hover:border-neon-cyan hover:text-neon-cyan
               `}
             >
@@ -178,8 +235,8 @@ export default function HomePage() {
               onClick={handleToggleHeatmap}
               title={showHeatmap ? "Hide heatmap" : "Show heatmap"}
               className={`
-                bg-cyber-dark border-cyber-border
-                ${showHeatmap ? "text-neon-green border-neon-green" : "text-muted-foreground"}
+                bg-cyber-dark/90 backdrop-blur-sm border-cyber-border
+                ${showHeatmap ? "text-neon-green border-neon-green shadow-neon-green" : "text-muted-foreground"}
                 hover:border-neon-cyan hover:text-neon-cyan
               `}
             >
@@ -199,7 +256,6 @@ export default function HomePage() {
           </div>
 
           <MapContainer
-            ref={mapRef}
             pingLogs={state.logs}
             towers={state.towers}
             showTowers={state.showTowers}
@@ -209,6 +265,7 @@ export default function HomePage() {
             showHeatmap={showHeatmap}
             onBoundsChange={handleBoundsChange}
             onHexbinClick={handleHexbinClick}
+            onMapReady={handleMapReady}
           />
         </div>
 
