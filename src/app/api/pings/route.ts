@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { apiRateLimits, createRateLimitResponse } from "@/lib/rate-limit";
+import { encryptCoordinate, decryptCoordinate, computeGridCoordinates } from "@/lib/encryption";
 import { PingLog } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -97,11 +98,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Transform to frontend format
+    // Transform to frontend format (decrypt coordinates)
     const pings: PingLog[] = (data || []).map((row: {
       id: string;
-      lat: number;
-      lng: number;
+      lat_encrypted: string;
+      lng_encrypted: string;
+      lat_grid: number;
+      lng_grid: number;
       reported_isp: string;
       verified_asn: string | null;
       latency_ms: number;
@@ -110,20 +113,33 @@ export async function GET(request: NextRequest) {
       download_speed: number;
       device_type: string;
       created_at: string;
-    }) => ({
-      id: row.id,
-      lat: row.lat,
-      lng: row.lng,
-      reportedISP: row.reported_isp,
-      verifiedASN: row.verified_asn,
-      latencyMs: row.latency_ms,
-      jitter: row.jitter,
-      uploadSpeed: Number(row.upload_speed),
-      downloadSpeed: Number(row.download_speed),
-      deviceType: row.device_type as "mobile" | "tablet" | "desktop",
-      userAgent: "",
-      timestamp: new Date(row.created_at).getTime(),
-    }));
+    }) => {
+      let lat: number;
+      let lng: number;
+      try {
+        lat = decryptCoordinate(row.lat_encrypted);
+        lng = decryptCoordinate(row.lng_encrypted);
+      } catch {
+        // Fallback to grid coordinates (legacy or key-mismatched data)
+        lat = row.lat_grid;
+        lng = row.lng_grid;
+      }
+
+      return {
+        id: row.id,
+        lat,
+        lng,
+        reportedISP: row.reported_isp,
+        verifiedASN: row.verified_asn,
+        latencyMs: row.latency_ms,
+        jitter: row.jitter,
+        uploadSpeed: Number(row.upload_speed),
+        downloadSpeed: Number(row.download_speed),
+        deviceType: row.device_type as "mobile" | "tablet" | "desktop",
+        userAgent: "",
+        timestamp: new Date(row.created_at).getTime(),
+      };
+    });
 
     return NextResponse.json(pings, {
       headers: {
@@ -210,10 +226,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ISP is required" }, { status: 400 });
     }
 
-    // Prepare data for insertion
+    // Encrypt exact coordinates and compute grid coordinates for spatial queries
+    const { lat_grid, lng_grid } = computeGridCoordinates(Number(lat), Number(lng));
+    const lat_encrypted = encryptCoordinate(Number(lat));
+    const lng_encrypted = encryptCoordinate(Number(lng));
+
+    // Accept optional client-provided UUID for shareable report links
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const clientId = body.id && typeof body.id === "string" && UUID_REGEX.test(body.id)
+      ? body.id
+      : undefined;
+
     const pingData = {
-      lat: Number(lat),
-      lng: Number(lng),
+      ...(clientId && { id: clientId }),
+      lat_encrypted,
+      lng_encrypted,
+      lat_grid,
+      lng_grid,
       reported_isp: sanitizeString(reportedISP),
       verified_asn: body.verifiedASN ? sanitizeString(body.verifiedASN) : null,
       latency_ms: Math.round(latencyMs),

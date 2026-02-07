@@ -15,7 +15,7 @@ import AreaSummarySheet from "@/components/overlays/AreaSummarySheet";
 import LocationSearch from "@/components/search/LocationSearch";
 import HeaderBar from "@/components/layout/HeaderBar";
 import { Button } from "@/components/ui/button";
-import { Radio, Layers, Menu, X, Map as MapIcon, Activity, Navigation, Loader2 } from "lucide-react";
+import { Radio, Layers, Menu, X, Map as MapIcon, Wifi, Navigation, Loader2 } from "lucide-react";
 import type { MapRef } from "@/components/map/MapContainer";
 
 // Dynamic import for the map (SSR disabled)
@@ -251,7 +251,7 @@ export default function HomePage() {
               onClick={handleStartScan}
               className="rounded-full w-14 h-14 bg-neon-green text-black hover:bg-neon-green/90 shadow-lg shadow-neon-green/30"
             >
-              <Activity className="w-6 h-6" />
+              <Wifi className="w-6 h-6" />
             </Button>
           </div>
 
@@ -351,7 +351,7 @@ export default function HomePage() {
             {/* Recent Scans / Live Feed */}
             <div className="cyber-panel p-4">
               <h3 className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-2">
-                Recent Intel
+                Recent Scans
               </h3>
               {state.logs.length > 0 ? (
                 <div className="space-y-2 max-h-48 overflow-y-auto">

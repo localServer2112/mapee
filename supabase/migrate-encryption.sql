@@ -1,56 +1,56 @@
--- Mapee Database Schema
--- Run this in Supabase SQL Editor to set up the database
+-- Migration: Add encrypted coordinate columns to ping_logs
+-- Run this in the Supabase SQL Editor
+-- This migrates from plain lat/lng to lat_encrypted/lng_encrypted + lat_grid/lng_grid
 
--- Enable PostGIS extension in a dedicated schema (not public)
-CREATE SCHEMA IF NOT EXISTS extensions;
-CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
+-- Step 1: Drop dependent objects that reference old lat/lng columns
+DROP MATERIALIZED VIEW IF EXISTS hexbin_stats CASCADE;
+DROP VIEW IF EXISTS isp_rankings CASCADE;
+DROP FUNCTION IF EXISTS get_pings_in_bounds CASCADE;
+DROP FUNCTION IF EXISTS get_hexbin_stats_in_bounds CASCADE;
 
--- Fix PostGIS system table: take ownership then enable RLS
-ALTER TABLE IF EXISTS public.spatial_ref_sys OWNER TO postgres;
-ALTER TABLE IF EXISTS public.spatial_ref_sys ENABLE ROW LEVEL SECURITY;
+-- Step 2: Add new columns (nullable initially so existing rows don't fail)
+ALTER TABLE ping_logs ADD COLUMN IF NOT EXISTS lat_encrypted TEXT;
+ALTER TABLE ping_logs ADD COLUMN IF NOT EXISTS lng_encrypted TEXT;
+ALTER TABLE ping_logs ADD COLUMN IF NOT EXISTS lat_grid DOUBLE PRECISION;
+ALTER TABLE ping_logs ADD COLUMN IF NOT EXISTS lng_grid DOUBLE PRECISION;
 
--- Ping logs table - stores individual network test results
--- Exact coordinates are AES-256-GCM encrypted; grid coordinates (~500m) used for spatial queries
-CREATE TABLE IF NOT EXISTS ping_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  lat_encrypted TEXT NOT NULL,
-  lng_encrypted TEXT NOT NULL,
-  lat_grid DOUBLE PRECISION NOT NULL,
-  lng_grid DOUBLE PRECISION NOT NULL,
-  location GEOGRAPHY(POINT, 4326) GENERATED ALWAYS AS (
+-- Step 3: Backfill new columns from existing lat/lng data
+-- Store plain-text coordinates as legacy values (the app handles these gracefully)
+-- Grid coordinates use the same 500m grid as the hexbin materialized view
+UPDATE ping_logs
+SET
+  lat_encrypted = lat::text,
+  lng_encrypted = lng::text,
+  lat_grid = (FLOOR(lat / 0.0045) * 0.0045 + 0.00225),
+  lng_grid = (FLOOR(lng / 0.005) * 0.005 + 0.0025)
+WHERE lat_encrypted IS NULL;
+
+-- Step 4: Make new columns NOT NULL now that they're backfilled
+ALTER TABLE ping_logs ALTER COLUMN lat_encrypted SET NOT NULL;
+ALTER TABLE ping_logs ALTER COLUMN lng_encrypted SET NOT NULL;
+ALTER TABLE ping_logs ALTER COLUMN lat_grid SET NOT NULL;
+ALTER TABLE ping_logs ALTER COLUMN lng_grid SET NOT NULL;
+
+-- Step 5: Drop the old plain-text columns and generated location column
+ALTER TABLE ping_logs DROP COLUMN IF EXISTS location;
+ALTER TABLE ping_logs DROP COLUMN IF EXISTS lat;
+ALTER TABLE ping_logs DROP COLUMN IF EXISTS lng;
+
+-- Step 6: Recreate the generated location column from grid coordinates
+ALTER TABLE ping_logs ADD COLUMN location GEOGRAPHY(POINT, 4326)
+  GENERATED ALWAYS AS (
     ST_SetSRID(ST_MakePoint(lng_grid, lat_grid), 4326)::geography
-  ) STORED,
-  reported_isp VARCHAR(100) NOT NULL,
-  verified_asn VARCHAR(100),
-  latency_ms INTEGER NOT NULL CHECK (latency_ms >= 0),
-  jitter INTEGER NOT NULL CHECK (jitter >= 0),
-  upload_speed DECIMAL(10, 2) NOT NULL CHECK (upload_speed >= 0),
-  download_speed DECIMAL(10, 2) NOT NULL CHECK (download_speed >= 0),
-  device_type VARCHAR(20) NOT NULL CHECK (device_type IN ('mobile', 'tablet', 'desktop')),
-  user_agent TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  ) STORED;
 
-  CONSTRAINT valid_lat_grid CHECK (lat_grid >= -90 AND lat_grid <= 90),
-  CONSTRAINT valid_lng_grid CHECK (lng_grid >= -180 AND lng_grid <= 180)
-);
-
--- Create spatial index for geographic queries
+-- Step 7: Create indexes
+CREATE INDEX IF NOT EXISTS idx_ping_logs_grid ON ping_logs (lat_grid, lng_grid);
+DROP INDEX IF EXISTS idx_ping_logs_location;
 CREATE INDEX IF NOT EXISTS idx_ping_logs_location ON ping_logs USING GIST (location);
 
--- Create index for time-based queries
-CREATE INDEX IF NOT EXISTS idx_ping_logs_created_at ON ping_logs (created_at DESC);
-
--- Create index for ISP filtering
-CREATE INDEX IF NOT EXISTS idx_ping_logs_isp ON ping_logs (reported_isp);
-
--- Create composite index for bounding-box queries on grid coordinates
-CREATE INDEX IF NOT EXISTS idx_ping_logs_grid ON ping_logs (lat_grid, lng_grid);
-
--- Aggregated hexbin statistics (materialized view for performance)
+-- Step 8: Recreate hexbin_stats materialized view using new grid columns
 CREATE MATERIALIZED VIEW IF NOT EXISTS hexbin_stats AS
 WITH hex_grid AS (
   SELECT
-    -- Generate hexbin ID based on grid coordinates (500m grid)
     CONCAT(
       FLOOR(lat_grid / 0.0045)::text, '_',
       FLOOR(lng_grid / 0.005)::text
@@ -75,7 +75,6 @@ SELECT
   MAX(latency_ms) as max_latency,
   COUNT(*)::INTEGER as ping_count,
   MODE() WITHIN GROUP (ORDER BY reported_isp) as top_isp,
-  -- Confidence score: higher with more samples, adjusted for recency
   LEAST(100, (COUNT(*) * 10 +
     SUM(CASE
       WHEN created_at > NOW() - INTERVAL '7 days' THEN 5
@@ -83,29 +82,16 @@ SELECT
       ELSE 1
     END)
   ))::INTEGER as confidence_score,
-  -- Consistency: % of pings under 100ms
   (COUNT(*) FILTER (WHERE latency_ms <= 100) * 100.0 / NULLIF(COUNT(*), 0))::INTEGER as consistency,
   MAX(created_at) as last_updated
 FROM hex_grid
 GROUP BY hex_id, center_lat, center_lng
 HAVING COUNT(*) >= 1;
 
--- Create index on materialized view
 CREATE UNIQUE INDEX IF NOT EXISTS idx_hexbin_stats_id ON hexbin_stats (hex_id);
 CREATE INDEX IF NOT EXISTS idx_hexbin_stats_location ON hexbin_stats (center_lat, center_lng);
 
--- Function to refresh hexbin stats (call periodically)
-CREATE OR REPLACE FUNCTION refresh_hexbin_stats()
-RETURNS void
-LANGUAGE plpgsql
-SET search_path = public
-AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY hexbin_stats;
-END;
-$$;
-
--- ISP rankings view (SECURITY INVOKER so it runs with caller's permissions)
+-- Step 9: Recreate isp_rankings view
 CREATE OR REPLACE VIEW isp_rankings WITH (security_invoker = true) AS
 SELECT
   reported_isp as isp,
@@ -120,7 +106,7 @@ WHERE created_at > NOW() - INTERVAL '30 days'
 GROUP BY reported_isp
 ORDER BY median_latency ASC;
 
--- Function to get pings within a bounding box (uses grid coords for spatial filter)
+-- Step 10: Recreate functions with new column names
 CREATE OR REPLACE FUNCTION get_pings_in_bounds(
   north DOUBLE PRECISION,
   south DOUBLE PRECISION,
@@ -171,7 +157,6 @@ BEGIN
 END;
 $$;
 
--- Function to get hexbin stats within bounds
 CREATE OR REPLACE FUNCTION get_hexbin_stats_in_bounds(
   north DOUBLE PRECISION,
   south DOUBLE PRECISION,
@@ -212,27 +197,22 @@ BEGIN
 END;
 $$;
 
--- Row Level Security (RLS) policies
-ALTER TABLE ping_logs ENABLE ROW LEVEL SECURITY;
+CREATE OR REPLACE FUNCTION refresh_hexbin_stats()
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW CONCURRENTLY hexbin_stats;
+END;
+$$;
 
--- Allow anyone to insert (anonymous submissions)
-CREATE POLICY "Allow anonymous inserts" ON ping_logs
-  FOR INSERT WITH CHECK (true);
-
--- Allow anyone to read
-CREATE POLICY "Allow public read" ON ping_logs
-  FOR SELECT USING (true);
-
--- Prevent updates and deletes (immutable logs)
-CREATE POLICY "Prevent updates" ON ping_logs
-  FOR UPDATE USING (false);
-
-CREATE POLICY "Prevent deletes" ON ping_logs
-  FOR DELETE USING (false);
-
--- Grant permissions
+-- Step 11: Re-grant permissions
 GRANT SELECT, INSERT ON ping_logs TO anon;
 GRANT SELECT ON hexbin_stats TO anon;
 GRANT SELECT ON isp_rankings TO anon;
 GRANT EXECUTE ON FUNCTION get_pings_in_bounds TO anon;
 GRANT EXECUTE ON FUNCTION get_hexbin_stats_in_bounds TO anon;
+
+-- Step 12: Reload PostgREST schema cache
+NOTIFY pgrst, 'reload schema';

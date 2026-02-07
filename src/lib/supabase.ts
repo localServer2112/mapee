@@ -29,8 +29,10 @@ export function createServerClient(): SupabaseClient | null {
 // Database types
 export interface DBPingLog {
   id: string;
-  lat: number;
-  lng: number;
+  lat_encrypted: string;
+  lng_encrypted: string;
+  lat_grid: number;
+  lng_grid: number;
   reported_isp: string;
   verified_asn: string | null;
   latency_ms: number;
@@ -40,7 +42,7 @@ export interface DBPingLog {
   device_type: "mobile" | "tablet" | "desktop";
   user_agent: string;
   created_at: string;
-  // PostGIS geography point
+  // PostGIS geography point (computed from grid coordinates)
   location?: unknown;
 }
 

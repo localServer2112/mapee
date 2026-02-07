@@ -69,10 +69,11 @@ export async function GET(request: NextRequest) {
 
   const apiKey = process.env.OPENCELLID_API_KEY;
 
-  // If no API key, return mock data
   if (!apiKey) {
-    console.warn("OPENCELLID_API_KEY not set, returning mock tower data");
-    return NextResponse.json(generateMockTowers(swLat, swLng, neLat, neLng));
+    return NextResponse.json(
+      { error: "OPENCELLID_API_KEY not configured" },
+      { status: 503 }
+    );
   }
 
   // Clamp bbox to API limits
@@ -99,15 +100,25 @@ export async function GET(request: NextRequest) {
     const response = await fetch(`${OPENCELLID_URL}?${params}`);
 
     if (!response.ok) {
-      throw new Error(`OpenCelliD API error: ${response.status}`);
+      return NextResponse.json(
+        { error: `OpenCelliD API returned ${response.status}` },
+        { status: 502 }
+      );
     }
 
     const data = await response.json();
 
     // OpenCelliD returns { error, code } on errors even with 200 status
     if (data.error) {
-      console.warn("OpenCelliD API error:", data.error);
-      throw new Error(data.error);
+      // "No cells found" is normal — just means no towers in this area
+      if (data.error === "No cells found") {
+        towerCache.set(cacheKey, { data: [], timestamp: Date.now() });
+        return NextResponse.json([], { headers: { "X-Cache": "MISS" } });
+      }
+      return NextResponse.json(
+        { error: data.error },
+        { status: 502 }
+      );
     }
 
     // Transform to our format
@@ -150,38 +161,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Tower API error:", error);
-    // Return mock data as fallback
-    return NextResponse.json(generateMockTowers(cSwLat, cSwLng, cNeLat, cNeLng));
+    return NextResponse.json(
+      { error: "Failed to fetch tower data" },
+      { status: 500 }
+    );
   }
-}
-
-/**
- * Generate mock tower data for development/demo/fallback
- */
-function generateMockTowers(
-  swLat: number,
-  swLng: number,
-  neLat: number,
-  neLng: number
-): CellTower[] {
-  const towers: CellTower[] = [];
-  const count = Math.floor(Math.random() * 5) + 5;
-
-  for (let i = 0; i < count; i++) {
-    const lat = swLat + Math.random() * (neLat - swLat);
-    const lng = swLng + Math.random() * (neLng - swLng);
-
-    towers.push({
-      id: `mock-${i}-${Date.now()}`,
-      lat,
-      lng,
-      type: Math.random() > 0.7 ? "5G" : "4G",
-      mcc: 621, // Nigeria MCC
-      mnc: Math.floor(Math.random() * 99) + 1,
-      lac: Math.floor(Math.random() * 65535),
-      cellId: Math.floor(Math.random() * 268435455),
-    });
-  }
-
-  return towers;
 }

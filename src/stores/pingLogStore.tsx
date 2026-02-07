@@ -25,7 +25,11 @@ function pingLogReducer(
   action: PingLogAction
 ): PingLogState {
   switch (action.type) {
-    case "ADD_LOG":
+    case "ADD_LOG": {
+      // Prevent duplicates
+      if (state.logs.some((l) => l.id === action.payload.id)) {
+        return state;
+      }
       const newLogs = [...state.logs, action.payload];
       // If offline, also add to pending sync queue
       const newPendingSync = state.isOnline
@@ -36,6 +40,7 @@ function pingLogReducer(
         logs: newLogs,
         pendingSync: newPendingSync,
       };
+    }
 
     case "SYNC_COMPLETE":
       return {
@@ -45,11 +50,19 @@ function pingLogReducer(
         ),
       };
 
-    case "LOAD_CACHED":
+    case "LOAD_CACHED": {
+      // Deduplicate by ID to handle stale localStorage data
+      const seen = new Set<string>();
+      const dedupedLogs = action.payload.filter((log) => {
+        if (seen.has(log.id)) return false;
+        seen.add(log.id);
+        return true;
+      });
       return {
         ...state,
-        logs: action.payload,
+        logs: dedupedLogs,
       };
+    }
 
     case "SET_ONLINE":
       return {
@@ -172,8 +185,12 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
 
     const pendingSync = loadFromStorage<PingLog[]>(STORAGE_KEYS.PENDING_SYNC);
     if (pendingSync && pendingSync.length > 0) {
-      // Merge pending sync with logs
-      dispatch({ type: "LOAD_CACHED", payload: [...(cachedLogs || []), ...pendingSync] });
+      // Merge pending sync with logs, deduplicating by ID
+      const existingIds = new Set((cachedLogs || []).map((l) => l.id));
+      const uniquePending = pendingSync.filter((l) => !existingIds.has(l.id));
+      if (uniquePending.length > 0) {
+        dispatch({ type: "LOAD_CACHED", payload: [...(cachedLogs || []), ...uniquePending] });
+      }
     }
   }, []);
 

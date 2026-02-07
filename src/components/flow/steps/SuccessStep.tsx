@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle, Share2, MapPin } from "lucide-react";
+import { CheckCircle, Link2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getLatencyStatus, getLatencyColor, getLatencyLabel } from "@/lib/latency";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ interface SuccessStepProps {
   uploadSpeed: number;
   downloadSpeed: number;
   isp: string;
+  pingId: string;
   onConfirm: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function SuccessStep({
   uploadSpeed,
   downloadSpeed,
   isp,
+  pingId,
   onConfirm,
 }: SuccessStepProps) {
   const { toast } = useToast();
@@ -28,25 +30,19 @@ export default function SuccessStep({
   const color = getLatencyColor(status);
   const label = getLatencyLabel(status);
 
-  const handleShare = async () => {
-    const shareText = `I just tested my network with MAPEE! ${isp}: ${latencyMs}ms (${label})`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "MAPEE Network Test",
-          text: shareText,
-          url: window.location.href,
-        });
-      } catch {
-        // User cancelled or error
-      }
-    } else {
-      // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(shareText);
+  const handleCopyReportLink = async () => {
+    const reportUrl = `${window.location.origin}/report/${pingId}`;
+    try {
+      await navigator.clipboard.writeText(reportUrl);
       toast({
-        title: "Copied to clipboard!",
-        description: "Share your result with the community",
+        title: "Report link copied!",
+        description: "Share this link after adding to map",
+      });
+    } catch {
+      // Fallback for older browsers
+      toast({
+        title: "Report link",
+        description: reportUrl,
       });
     }
   };
@@ -127,11 +123,11 @@ export default function SuccessStep({
 
         <Button
           variant="cyber"
-          onClick={handleShare}
+          onClick={handleCopyReportLink}
           className="w-full font-mono"
         >
-          <Share2 className="w-4 h-4 mr-2" />
-          SHARE RESULT
+          <Link2 className="w-4 h-4 mr-2" />
+          COPY REPORT LINK
         </Button>
       </div>
 

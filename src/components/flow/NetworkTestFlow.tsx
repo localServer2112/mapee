@@ -36,6 +36,7 @@ export default function NetworkTestFlow({
     uploadSpeed: number;
     downloadSpeed: number;
   } | null>(null);
+  const [pingId, setPingId] = useState<string>("");
 
   const handleLocationGranted = (coords: Coordinates) => {
     setCoordinates(coords);
@@ -56,6 +57,7 @@ export default function NetworkTestFlow({
     downloadSpeed: number
   ) => {
     setTestResult({ latencyMs, jitter, uploadSpeed, downloadSpeed });
+    setPingId(generateId());
     onTestingStateChange?.(false);
     setStep("success");
   };
@@ -64,7 +66,7 @@ export default function NetworkTestFlow({
     if (!coordinates || !testResult) return;
 
     const log: PingLog = {
-      id: generateId(),
+      id: pingId,
       lat: coordinates.lat,
       lng: coordinates.lng,
       reportedISP: selectedISP,
@@ -88,6 +90,7 @@ export default function NetworkTestFlow({
     setCoordinates(null);
     setSelectedISP("");
     setTestResult(null);
+    setPingId("");
     onLocationChange?.(null);
     onTestingStateChange?.(false);
     onClose();
@@ -125,6 +128,7 @@ export default function NetworkTestFlow({
                   uploadSpeed={testResult.uploadSpeed}
                   downloadSpeed={testResult.downloadSpeed}
                   isp={selectedISP}
+                  pingId={pingId}
                   onConfirm={handleSubmit}
                 />
               )}
