@@ -85,6 +85,7 @@ export interface MapBounds {
 export interface PingLogState {
   logs: PingLog[];
   pendingSync: PingLog[];
+  myPingIds: string[];
   isOnline: boolean;
   selectedHexbin: HexBin | null;
   showTowers: boolean;
@@ -98,4 +99,6 @@ export type PingLogAction =
   | { type: "SET_ONLINE"; payload: boolean }
   | { type: "SELECT_HEXBIN"; payload: HexBin | null }
   | { type: "TOGGLE_TOWERS" }
-  | { type: "SET_TOWERS"; payload: CellTower[] };
+  | { type: "SET_TOWERS"; payload: CellTower[] }
+  | { type: "ADD_MY_PING"; payload: string }
+  | { type: "LOAD_MY_PINGS"; payload: string[] };

@@ -39,6 +39,7 @@ export const DATA_FRESHNESS = {
 export const STORAGE_KEYS = {
   PING_LOGS: "mapee-ping-logs",
   PENDING_SYNC: "mapee-pending-sync",
+  MY_PING_IDS: "mapee-my-ping-ids",
   USER_PREFERENCES: "mapee-preferences",
 };
 

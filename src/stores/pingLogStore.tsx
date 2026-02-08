@@ -14,6 +14,7 @@ import { STORAGE_KEYS, API_URLS } from "@/lib/constants";
 const initialState: PingLogState = {
   logs: [],
   pendingSync: [],
+  myPingIds: [],
   isOnline: true,
   selectedHexbin: null,
   showTowers: false,
@@ -86,6 +87,19 @@ function pingLogReducer(
       return {
         ...state,
         towers: action.payload,
+      };
+
+    case "ADD_MY_PING":
+      if (state.myPingIds.includes(action.payload)) return state;
+      return {
+        ...state,
+        myPingIds: [...state.myPingIds, action.payload],
+      };
+
+    case "LOAD_MY_PINGS":
+      return {
+        ...state,
+        myPingIds: action.payload,
       };
 
     default:
@@ -192,6 +206,11 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "LOAD_CACHED", payload: [...(cachedLogs || []), ...uniquePending] });
       }
     }
+
+    const myPingIds = loadFromStorage<string[]>(STORAGE_KEYS.MY_PING_IDS);
+    if (myPingIds && myPingIds.length > 0) {
+      dispatch({ type: "LOAD_MY_PINGS", payload: myPingIds });
+    }
   }, []);
 
   // Save to localStorage when logs change
@@ -205,6 +224,13 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.PENDING_SYNC, state.pendingSync);
   }, [state.pendingSync]);
+
+  // Save my ping IDs
+  useEffect(() => {
+    if (state.myPingIds.length > 0) {
+      saveToStorage(STORAGE_KEYS.MY_PING_IDS, state.myPingIds);
+    }
+  }, [state.myPingIds]);
 
   // Sync pending logs to server
   const syncPendingLogs = useCallback(async () => {
@@ -272,6 +298,7 @@ export function PingLogProvider({ children }: { children: ReactNode }) {
   // Helper functions
   const addPingLog = useCallback(async (log: PingLog) => {
     dispatch({ type: "ADD_LOG", payload: log });
+    dispatch({ type: "ADD_MY_PING", payload: log.id });
 
     // If online, try to sync immediately
     if (state.isOnline) {

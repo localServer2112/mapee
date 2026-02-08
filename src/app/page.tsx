@@ -295,38 +295,6 @@ export default function HomePage() {
           {/* Sidebar Content - Stats & Feed */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
-            {/* System Status Panel */}
-            <div className="cyber-panel p-4 space-y-3">
-              <h3 className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
-                System Status
-              </h3>
-
-              <div className="flex items-center justify-between font-mono text-sm">
-                <span className="text-gray-400">Connection</span>
-                {isOnline ? (
-                  <span className="text-neon-green flex items-center gap-2">
-                    <span className="status-dot-online" /> ONLINE
-                  </span>
-                ) : (
-                  <span className="text-neon-red flex items-center gap-2">
-                    <span className="status-dot-offline" /> OFFLINE
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between font-mono text-sm">
-                <span className="text-gray-400">Total Scans</span>
-                <span className="text-neon-cyan">{state.logs.length}</span>
-              </div>
-
-              <div className="flex items-center justify-between font-mono text-sm">
-                <span className="text-gray-400">Pending Sync</span>
-                <span className={state.pendingSync.length > 0 ? "text-neon-yellow" : "text-gray-500"}>
-                  {state.pendingSync.length}
-                </span>
-              </div>
-            </div>
-
             {/* Map Legend */}
             <div className="cyber-panel p-4">
               <h3 className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-3">
@@ -348,41 +316,77 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* System Status Panel */}
+            <div className="cyber-panel p-4 space-y-3">
+              <h3 className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                System Status
+              </h3>
+
+              <div className="flex items-center justify-between font-mono text-sm">
+                <span className="text-gray-400">Connection</span>
+                {isOnline ? (
+                  <span className="text-neon-green flex items-center gap-2">
+                    <span className="status-dot-online" /> ONLINE
+                  </span>
+                ) : (
+                  <span className="text-neon-red flex items-center gap-2">
+                    <span className="status-dot-offline" /> OFFLINE
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between font-mono text-sm">
+                <span className="text-gray-400">My Scans</span>
+                <span className="text-neon-cyan">{state.myPingIds.length}</span>
+              </div>
+
+              <div className="flex items-center justify-between font-mono text-sm">
+                <span className="text-gray-400">Pending Sync</span>
+                <span className={state.pendingSync.length > 0 ? "text-neon-yellow" : "text-gray-500"}>
+                  {state.pendingSync.length}
+                </span>
+              </div>
+            </div>
+
             {/* Recent Scans / Live Feed */}
             <div className="cyber-panel p-4">
               <h3 className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-2">
                 Recent Scans
               </h3>
-              {state.logs.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {state.logs.slice(-5).reverse().map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-center justify-between text-xs p-2 rounded bg-cyber-black/50 border border-cyber-border"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            log.latencyMs <= 50
-                              ? "bg-neon-green"
-                              : log.latencyMs <= 150
-                              ? "bg-neon-yellow"
-                              : "bg-neon-red"
-                          }`}
-                        />
-                        <span className="text-gray-300 truncate max-w-[120px]">
-                          {log.reportedISP}
-                        </span>
+              {(() => {
+                const myPingIdSet = new Set(state.myPingIds);
+                const myLogs = state.logs.filter((l) => myPingIdSet.has(l.id));
+                return myLogs.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {myLogs.slice(-5).reverse().map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between text-xs p-2 rounded bg-cyber-black/50 border border-cyber-border"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              log.latencyMs <= 50
+                                ? "bg-neon-green"
+                                : log.latencyMs <= 150
+                                ? "bg-neon-yellow"
+                                : "bg-neon-red"
+                            }`}
+                          />
+                          <span className="text-gray-300 truncate max-w-[120px]">
+                            {log.reportedISP}
+                          </span>
+                        </div>
+                        <span className="font-mono text-neon-cyan">{log.latencyMs}ms</span>
                       </div>
-                      <span className="font-mono text-neon-cyan">{log.latencyMs}ms</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="h-24 flex items-center justify-center text-xs text-muted-foreground/50 italic border border-dashed border-cyber-border rounded">
-                  No scans recorded yet
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-24 flex items-center justify-center text-xs text-muted-foreground/50 italic border border-dashed border-cyber-border rounded">
+                    No scans recorded yet
+                  </div>
+                );
+              })()}
             </div>
 
           </div>
