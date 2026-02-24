@@ -85,10 +85,10 @@ export default function HeaderBar({
         </div>
       </div>
 
-      {/* Right: Time */}
-      <div className="flex items-center gap-2 text-muted-foreground">
+      {/* Right: Time (Hidden on mobile to make room for hamburger menu) */}
+      <div className="flex items-center gap-2 text-muted-foreground pr-10 lg:pr-0">
         <span className="text-xs hidden sm:inline">SYS.TIME</span>
-        <span className="text-neon-cyan tabular-nums">{currentTime}</span>
+        <span className="text-neon-cyan tabular-nums hidden sm:inline">{currentTime}</span>
       </div>
     </header>
   );

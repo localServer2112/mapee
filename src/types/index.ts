@@ -13,6 +13,7 @@ export interface PingLog {
   timestamp: number;
   deviceType: DeviceType;
   userAgent: string;
+  isLocationExact?: boolean;
 }
 
 export type DeviceType = "mobile" | "tablet" | "desktop";

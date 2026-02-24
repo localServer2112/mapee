@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CellTower } from "@/types";
+import { redis } from "@/lib/redis";
 
 /**
  * Cell Tower API Proxy
@@ -81,9 +82,24 @@ export async function GET(request: NextRequest) {
   const cacheKey = getCacheKey((cSwLat + cNeLat) / 2, (cSwLng + cNeLng) / 2);
 
   // Check cache
-  const cached = towerCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return NextResponse.json(cached.data, {
+  const redisKey = `towers:${cacheKey}`;
+  let cachedData = null;
+
+  try {
+    if (redis) {
+      cachedData = await redis.get(redisKey);
+    } else {
+      const cached = towerCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        cachedData = cached.data;
+      }
+    }
+  } catch (e) {
+    console.error("Redis cache error:", e);
+  }
+
+  if (cachedData) {
+    return NextResponse.json(cachedData, {
       headers: { "X-Cache": "HIT" },
     });
   }
@@ -112,7 +128,13 @@ export async function GET(request: NextRequest) {
     if (data.error) {
       // "No cells found" is normal — just means no towers in this area
       if (data.error === "No cells found") {
-        towerCache.set(cacheKey, { data: [], timestamp: Date.now() });
+        try {
+          if (redis) {
+            await redis.set(redisKey, [], { ex: 300 }); // 5 mins
+          } else {
+            towerCache.set(cacheKey, { data: [], timestamp: Date.now() });
+          }
+        } catch (e) { console.error("Redis set error:", e); }
         return NextResponse.json([], { headers: { "X-Cache": "MISS" } });
       }
       return NextResponse.json(
@@ -122,7 +144,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to our format
-    const towers: CellTower[] = (data.cells || []).map(
+    const cells = Array.isArray(data?.cells) ? data.cells : [];
+    const towers: CellTower[] = cells.map(
       (cell: {
         cellid: number;
         lat: number;
@@ -144,16 +167,24 @@ export async function GET(request: NextRequest) {
     );
 
     // Cache result
-    towerCache.set(cacheKey, { data: towers, timestamp: Date.now() });
+    try {
+      if (redis) {
+        await redis.set(redisKey, towers, { ex: 300 }); // 5 minutes
+      } else {
+        towerCache.set(cacheKey, { data: towers, timestamp: Date.now() });
 
-    // Clean stale entries
-    if (towerCache.size > 100) {
-      const now = Date.now();
-      for (const [key, value] of towerCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-          towerCache.delete(key);
+        // Clean stale entries
+        if (towerCache.size > 100) {
+          const now = Date.now();
+          for (const [key, value] of towerCache.entries()) {
+            if (now - value.timestamp > CACHE_TTL) {
+              towerCache.delete(key);
+            }
+          }
         }
       }
+    } catch (e) {
+      console.error("Redis set error:", e);
     }
 
     return NextResponse.json(towers, {

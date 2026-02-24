@@ -81,7 +81,7 @@ export default function NetworkTestFlow({
     };
 
     onSubmit(log);
-    handleClose();
+    // Don't close immediately. Let the SuccessStep transition to a Thank You state.
   };
 
   const handleClose = () => {
@@ -101,7 +101,7 @@ export default function NetworkTestFlow({
       {isOpen && (
         <GlassOverlay isOpen={isOpen} onClose={handleClose}>
           {/* Progress indicator */}
-          <FlowProgress currentStep={step} className="mb-6" />
+          <FlowProgress currentStep={step} className="mb-6 pt-8 sm:pt-0 pr-6 sm:pr-0" />
 
           {/* Step content */}
           <AnimatePresence mode="wait">
@@ -130,6 +130,7 @@ export default function NetworkTestFlow({
                   isp={selectedISP}
                   pingId={pingId}
                   onConfirm={handleSubmit}
+                  onClose={handleClose}
                 />
               )}
             </motion.div>

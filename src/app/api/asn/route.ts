@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ASNInfo } from "@/types";
 import { whoisIp } from "whoiser";
 import { apiRateLimits, createRateLimitResponse } from "@/lib/rate-limit";
+import { redis } from "@/lib/redis";
 
 /**
  * ASN Lookup API
@@ -20,17 +21,16 @@ const asnCache = new Map<string, { data: ASNInfo; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
-  // Rate limiting
-  const rateLimitResult = apiRateLimits.asn(request);
+  // Rate limiting (now async via Redis)
+  const rateLimitResult = await apiRateLimits.asn(request);
   if (!rateLimitResult.success) {
     return createRateLimitResponse(rateLimitResult.reset);
   }
 
   try {
     // Get client IP
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const realIp = request.headers.get("x-real-ip");
-    let clientIp = forwardedFor?.split(",")[0] || realIp || null;
+    // NextRequest securely populates request.ip on Vercel, fallback to x-real-ip
+    let clientIp = request.ip || request.headers.get("x-real-ip") || null;
 
     // Handle localhost for testing
     if (!clientIp || clientIp === "::1" || clientIp === "127.0.0.1") {
@@ -40,9 +40,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Check cache
-    const cached = asnCache.get(clientIp);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data, {
+    const cacheKey = `asn:${clientIp}`;
+    let cachedData = null;
+
+    try {
+      if (redis) {
+        cachedData = await redis.get(cacheKey);
+      } else {
+        const cached = asnCache.get(clientIp);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+          cachedData = cached.data;
+        }
+      }
+    } catch (e) {
+      console.error("Redis cache error:", e);
+    }
+
+    if (cachedData) {
+      return NextResponse.json(cachedData, {
         headers: {
           "Cache-Control": "no-store, max-age=0",
           "X-Cache": "HIT",
@@ -97,16 +112,24 @@ export async function GET(request: NextRequest) {
     };
 
     // Cache the result
-    asnCache.set(clientIp, { data: asnInfo, timestamp: Date.now() });
+    try {
+      if (redis) {
+        await redis.set(cacheKey, asnInfo, { ex: 600 }); // 10 minutes
+      } else {
+        asnCache.set(clientIp, { data: asnInfo, timestamp: Date.now() });
 
-    // Clean old cache entries periodically
-    if (asnCache.size > 50) {
-      const now = Date.now();
-      for (const [key, value] of asnCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-          asnCache.delete(key);
+        // Clean old cache entries periodically
+        if (asnCache.size > 50) {
+          const now = Date.now();
+          for (const [key, value] of asnCache.entries()) {
+            if (now - value.timestamp > CACHE_TTL) {
+              asnCache.delete(key);
+            }
+          }
         }
       }
+    } catch (e) {
+      console.error("Redis set error:", e);
     }
 
     return NextResponse.json(asnInfo, {

@@ -1,109 +1,84 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { redis } from "./redis";
 
 interface RateLimitConfig {
   interval: number; // Time window in milliseconds
   uniqueTokenPerInterval: number; // Max requests per IP per interval
+  namespace: string;
 }
 
+interface RateLimitResult {
+  success: boolean;
+  remaining: number;
+  reset: number;
+}
+
+export function getClientIP(request: NextRequest): string {
+  // Use Vercel's securely populated request.ip or fallback to x-real-ip
+  return request.ip || request.headers.get("x-real-ip") || "unknown";
+}
+
+// In-memory fallback if Redis is not configured
 interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
-
-// In-memory store for rate limiting (use Redis in production)
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-// Clean up expired entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, 60000); // Clean every minute
-
-export function getClientIP(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
-  return forwardedFor?.split(",")[0].trim() || realIp || "unknown";
-}
+const localRateLimitStore = new Map<string, RateLimitEntry>();
 
 export function rateLimit(config: RateLimitConfig) {
-  return function checkRateLimit(request: NextRequest): {
-    success: boolean;
-    remaining: number;
-    reset: number;
-  } {
-    const ip = getClientIP(request);
-    const key = `${ip}`;
-    const now = Date.now();
+  // If we have redis, instantiate upstash ratelimiter
+  const upstashLimiter = redis
+    ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(config.uniqueTokenPerInterval, `${Math.ceil(config.interval / 1000)} s` as any),
+      prefix: `@upstash/ratelimit/${config.namespace}`,
+    })
+    : null;
 
-    const entry = rateLimitStore.get(key);
+  return async function checkRateLimit(request: NextRequest): Promise<RateLimitResult> {
+    const ip = getClientIP(request);
+
+    // 1. Try Redis first
+    if (upstashLimiter) {
+      try {
+        const result = await upstashLimiter.limit(ip);
+        return {
+          success: result.success,
+          remaining: result.remaining,
+          reset: result.reset, // timestamp in ms
+        };
+      } catch (e) {
+        console.error("Upstash rate limit error, falling back locally:", e);
+      }
+    }
+
+    // 2. Local in-memory limit fallback (lazy cleanup)
+    const key = `${config.namespace}:${ip}`;
+    const now = Date.now();
+    const entry = localRateLimitStore.get(key);
 
     if (!entry || now > entry.resetTime) {
-      // First request or window expired
-      rateLimitStore.set(key, {
-        count: 1,
-        resetTime: now + config.interval,
-      });
-      return {
-        success: true,
-        remaining: config.uniqueTokenPerInterval - 1,
-        reset: now + config.interval,
-      };
+      localRateLimitStore.set(key, { count: 1, resetTime: now + config.interval });
+      return { success: true, remaining: config.uniqueTokenPerInterval - 1, reset: now + config.interval };
     }
 
     if (entry.count >= config.uniqueTokenPerInterval) {
-      // Rate limit exceeded
-      return {
-        success: false,
-        remaining: 0,
-        reset: entry.resetTime,
-      };
+      return { success: false, remaining: 0, reset: entry.resetTime };
     }
 
-    // Increment counter
     entry.count++;
-    return {
-      success: true,
-      remaining: config.uniqueTokenPerInterval - entry.count,
-      reset: entry.resetTime,
-    };
+    return { success: true, remaining: config.uniqueTokenPerInterval - entry.count, reset: entry.resetTime };
   };
 }
 
 // Pre-configured rate limiters for different endpoints
 export const apiRateLimits = {
-  // Geocode: 30 requests per minute
-  geocode: rateLimit({
-    interval: 60 * 1000,
-    uniqueTokenPerInterval: 30,
-  }),
-
-  // ASN lookup: 20 requests per minute
-  asn: rateLimit({
-    interval: 60 * 1000,
-    uniqueTokenPerInterval: 20,
-  }),
-
-  // Ping submission: 10 requests per minute (prevent spam)
-  pingSubmit: rateLimit({
-    interval: 60 * 1000,
-    uniqueTokenPerInterval: 10,
-  }),
-
-  // Data fetch: 60 requests per minute
-  dataFetch: rateLimit({
-    interval: 60 * 1000,
-    uniqueTokenPerInterval: 60,
-  }),
-
-  // Towers: 20 requests per minute
-  towers: rateLimit({
-    interval: 60 * 1000,
-    uniqueTokenPerInterval: 20,
-  }),
+  geocode: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 30, namespace: "geocode" }),
+  asn: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 20, namespace: "asn" }),
+  pingSubmit: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 10, namespace: "pingSubmit" }),
+  dataFetch: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 60, namespace: "dataFetch" }),
+  towers: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 20, namespace: "towers" }),
 };
 
 export function createRateLimitResponse(reset: number): NextResponse {

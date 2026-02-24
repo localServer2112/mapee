@@ -15,7 +15,7 @@ import AreaSummarySheet from "@/components/overlays/AreaSummarySheet";
 import LocationSearch from "@/components/search/LocationSearch";
 import HeaderBar from "@/components/layout/HeaderBar";
 import { Button } from "@/components/ui/button";
-import { Radio, Layers, Menu, X, Map as MapIcon, Wifi, Navigation, Loader2 } from "lucide-react";
+import { Radio, Layers, Menu, X, Map as MapIcon, Wifi, Navigation, Loader2, Plus } from "lucide-react";
 import type { MapRef } from "@/components/map/MapContainer";
 
 // Dynamic import for the map (SSR disabled)
@@ -174,14 +174,14 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="relative h-screen w-full overflow-hidden bg-cyber-black pt-12">
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-cyber-black pt-12">
       {/* Header Bar */}
       <HeaderBar isOnline={isOnline} scanCount={state.logs.length} />
 
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        className="lg:hidden fixed top-14 right-4 z-30 p-2 rounded-lg bg-cyber-dark border border-cyber-border text-neon-cyan hover:bg-cyber-border transition-colors"
+        className="lg:hidden fixed top-2 right-4 z-[45] p-1.5 rounded-lg bg-cyber-dark/80 backdrop-blur-sm border border-cyber-border text-neon-cyan hover:bg-cyber-border transition-colors"
         aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
       >
         {isMobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -205,17 +205,17 @@ export default function HomePage() {
                   {locationSource === "searching"
                     ? "Locating..."
                     : locationSource === "gps"
-                    ? "GPS"
-                    : locationSource === "ip"
-                    ? "Network"
-                    : ""}
+                      ? "GPS"
+                      : locationSource === "ip"
+                        ? "Network"
+                        : ""}
                 </span>
               </div>
             </div>
           )}
 
           {/* Map Controls Overlay (Bottom Left of Map) */}
-          <div className="absolute bottom-6 left-4 z-10 flex flex-col gap-2">
+          <div className="absolute bottom-10 left-4 z-10 flex flex-col gap-2">
             <Button
               variant="outline"
               size="icon"
@@ -245,13 +245,13 @@ export default function HomePage() {
           </div>
 
           {/* Mobile FAB for starting scan */}
-          <div className="lg:hidden absolute bottom-6 right-4 z-10">
+          <div className="lg:hidden absolute bottom-10 right-4 z-10">
             <Button
-              size="lg"
+              size="icon"
               onClick={handleStartScan}
-              className="rounded-full w-14 h-14 bg-neon-green text-black hover:bg-neon-green/90 shadow-lg shadow-neon-green/30"
+              className="rounded-full w-14 h-14 bg-neon-green text-black hover:bg-neon-green/90 shadow-[0_0_15px_rgba(0,255,136,0.3)] transition-all flex justify-center items-center"
             >
-              <Wifi className="w-6 h-6" />
+              <Plus className="w-8 h-8 text-black" strokeWidth={2.5} />
             </Button>
           </div>
 
@@ -365,13 +365,12 @@ export default function HomePage() {
                       >
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${
-                              log.latencyMs <= 50
-                                ? "bg-neon-green"
-                                : log.latencyMs <= 150
+                            className={`w-2 h-2 rounded-full ${log.latencyMs <= 50
+                              ? "bg-neon-green"
+                              : log.latencyMs <= 150
                                 ? "bg-neon-yellow"
                                 : "bg-neon-red"
-                            }`}
+                              }`}
                           />
                           <span className="text-gray-300 truncate max-w-[120px]">
                             {log.reportedISP}

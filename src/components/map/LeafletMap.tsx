@@ -2,7 +2,7 @@
 
 import { MapContainer, TileLayer, useMapEvents, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { useCallback, useMemo, useEffect, useRef } from "react";
+import { useCallback, useMemo, useEffect, useRef, useDeferredValue } from "react";
 import L from "leaflet";
 import { PingLog, HexBin, CellTower, MapBounds } from "@/types";
 import { MAP_CONFIG } from "@/lib/constants";
@@ -168,8 +168,11 @@ function LeafletMap({
     getMap: () => mapRef.current,
   }), []);
 
-  // Generate hexbins from ping logs
-  const hexbins = useMemo(() => createHexbins(pingLogs), [pingLogs]);
+  // Defer ping logs to unblock the main thread while hexbins recalculate
+  const deferredPingLogs = useDeferredValue(pingLogs);
+
+  // Generate hexbins from deferred ping logs
+  const hexbins = useMemo(() => createHexbins(deferredPingLogs), [deferredPingLogs]);
 
   // Get nearest towers for spider legs
   const nearestTowers = useMemo(() => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiRateLimits, createRateLimitResponse } from "@/lib/rate-limit";
+import { redis } from "@/lib/redis";
 
 /**
  * Geocoding API Proxy
@@ -15,8 +16,8 @@ const geocodeCache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(request: NextRequest) {
-  // Rate limiting
-  const rateLimitResult = apiRateLimits.geocode(request);
+  // Rate limiting (now async via Redis)
+  const rateLimitResult = await apiRateLimits.geocode(request);
   if (!rateLimitResult.success) {
     return createRateLimitResponse(rateLimitResult.reset);
   }
@@ -42,10 +43,24 @@ export async function GET(request: NextRequest) {
   }
 
   // Check cache
-  const cacheKey = `${sanitizedQuery}:${countrycodes || ""}`;
-  const cached = geocodeCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return NextResponse.json(cached.data, {
+  const cacheKey = `geocode:${sanitizedQuery}:${countrycodes || ""}`;
+  let cachedData = null;
+
+  try {
+    if (redis) {
+      cachedData = await redis.get(cacheKey);
+    } else {
+      const cached = geocodeCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        cachedData = cached.data;
+      }
+    }
+  } catch (e) {
+    console.error("Redis cache error:", e);
+  }
+
+  if (cachedData) {
+    return NextResponse.json(cachedData, {
       headers: {
         "X-Cache": "HIT",
         "X-RateLimit-Remaining": String(rateLimitResult.remaining),
@@ -96,16 +111,24 @@ export async function GET(request: NextRequest) {
     );
 
     // Cache the results
-    geocodeCache.set(cacheKey, { data: results, timestamp: Date.now() });
+    try {
+      if (redis) {
+        await redis.set(cacheKey, results, { ex: 300 }); // 5 minutes
+      } else {
+        geocodeCache.set(cacheKey, { data: results, timestamp: Date.now() });
 
-    // Clean old cache entries
-    if (geocodeCache.size > 100) {
-      const now = Date.now();
-      for (const [key, value] of geocodeCache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-          geocodeCache.delete(key);
+        // Clean old cache entries
+        if (geocodeCache.size > 100) {
+          const now = Date.now();
+          for (const [key, value] of geocodeCache.entries()) {
+            if (now - value.timestamp > CACHE_TTL) {
+              geocodeCache.delete(key);
+            }
+          }
         }
       }
+    } catch (e) {
+      console.error("Redis set error:", e);
     }
 
     return NextResponse.json(results, {

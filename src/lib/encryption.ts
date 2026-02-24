@@ -1,65 +1,100 @@
-import crypto from "node:crypto";
-
-const ALGORITHM = "aes-256-gcm";
+const ALGORITHM = "AES-GCM";
 const IV_LENGTH = 12;
-const AUTH_TAG_LENGTH = 16;
 
-function getKey(): Buffer {
+/**
+ * Parses the 64-character hex string into a CryptoKey for Web Crypto API.
+ */
+async function getKey(): Promise<CryptoKey> {
   const keyHex = process.env.ENCRYPTION_KEY;
   if (!keyHex || keyHex.length !== 64) {
     throw new Error(
       "ENCRYPTION_KEY must be a 64-character hex string (32 bytes). " +
-        'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
   }
-  return Buffer.from(keyHex, "hex");
+  const keyBytes = new Uint8Array(
+    keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+  );
+  return await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: ALGORITHM },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+function toHex(buffer: ArrayBuffer | Uint8Array): string {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function fromHex(hex: string): Uint8Array {
+  return new Uint8Array(
+    hex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+  );
 }
 
 /** Encrypt a plaintext string using AES-256-GCM. Returns iv:authTag:ciphertext (hex). */
-export function encrypt(plaintext: string): string {
-  const key = getKey();
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, {
-    authTagLength: AUTH_TAG_LENGTH,
-  });
+export async function encrypt(plaintext: string): Promise<string> {
+  const key = await getKey();
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const encoded = new TextEncoder().encode(plaintext);
 
-  let encrypted = cipher.update(plaintext, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  const authTag = cipher.getAuthTag();
+  const cipherBuffer = await crypto.subtle.encrypt(
+    { name: ALGORITHM, iv: iv as BufferSource },
+    key,
+    encoded
+  );
+  const cipherBytes = new Uint8Array(cipherBuffer);
 
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
+  // WebCrypto AES-GCM appends the 16-byte auth tag at the end of the ciphertext.
+  // We slice it to maintain backwards compatibility with the existing Node.js format.
+  const ciphertext = cipherBytes.slice(0, -16);
+  const authTag = cipherBytes.slice(-16);
+
+  return `${toHex(iv)}:${toHex(authTag)}:${toHex(ciphertext)}`;
 }
 
 /** Decrypt a string previously encrypted with encrypt(). */
-export function decrypt(encryptedStr: string): string {
-  const key = getKey();
+export async function decrypt(encryptedStr: string): Promise<string> {
+  const key = await getKey();
   const parts = encryptedStr.split(":");
   if (parts.length !== 3) {
     throw new Error("Invalid encrypted string format");
   }
 
-  const [ivHex, authTagHex, ciphertext] = parts;
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
+  const iv = fromHex(parts[0]);
+  const authTag = fromHex(parts[1]);
+  const ciphertext = fromHex(parts[2]);
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, {
-    authTagLength: AUTH_TAG_LENGTH,
-  });
-  decipher.setAuthTag(authTag);
+  // WebCrypto expects the auth tag appended to the ciphertext
+  const combined = new Uint8Array(ciphertext.length + authTag.length);
+  combined.set(ciphertext);
+  combined.set(authTag, ciphertext.length);
 
-  let decrypted = decipher.update(ciphertext, "hex", "utf8");
-  decrypted += decipher.final("utf8");
+  // Create a strict ArrayBuffer copy to satisfy TypeScript DOM types
+  // which reject SharedArrayBuffer variants implied by ArrayBufferLike
+  const combinedBuffer = new ArrayBuffer(combined.length);
+  new Uint8Array(combinedBuffer).set(combined);
 
-  return decrypted;
+  const decryptedBuffer = await crypto.subtle.decrypt(
+    { name: ALGORITHM, iv: iv as BufferSource },
+    key,
+    combinedBuffer
+  );
+
+  return new TextDecoder().decode(decryptedBuffer);
 }
 
 /** Encrypt a coordinate number. */
-export function encryptCoordinate(value: number): string {
-  return encrypt(value.toFixed(10));
+export async function encryptCoordinate(value: number): Promise<string> {
+  return await encrypt(value.toFixed(10));
 }
 
 /** Decrypt back to a coordinate number. Handles legacy plain-text values from pre-encryption data. */
-export function decryptCoordinate(encryptedStr: string): number {
+export async function decryptCoordinate(encryptedStr: string): Promise<number> {
   // Legacy data: plain number stored as text before encryption was added
   if (!encryptedStr.includes(":")) {
     const num = parseFloat(encryptedStr);
@@ -69,7 +104,7 @@ export function decryptCoordinate(encryptedStr: string): number {
     throw new Error("Invalid legacy coordinate value");
   }
 
-  const num = parseFloat(decrypt(encryptedStr));
+  const num = parseFloat(await decrypt(encryptedStr));
   if (isNaN(num)) {
     throw new Error("Decrypted value is not a valid number");
   }

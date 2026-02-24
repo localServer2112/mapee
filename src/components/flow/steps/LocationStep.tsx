@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Shield, Navigation, Loader2, Check } from "lucide-react";
+import { MapPin, Shield, Navigation, Loader2, Check, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocationWaterfall, LocationSource } from "@/hooks/useLocationWaterfall";
 import { Coordinates } from "@/types";
@@ -36,12 +36,14 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
     error,
     ipLocation,
     refineWithGPS,
+    reset,
   } = useLocationWaterfall();
 
   const [hasAttemptedGPS, setHasAttemptedGPS] = useState(false);
   const [showLocationDetails, setShowLocationDetails] = useState(false);
 
   // Auto-proceed when we have a location (IP or GPS)
+  // DELETED: User requested explicit accuracy rating instead of auto-proceed
   useEffect(() => {
     if (coordinates && locationSource !== "searching" && locationSource !== "none") {
       // Small delay to show the user what location source we're using
@@ -65,6 +67,12 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
     if (coordinates) {
       onGranted(coordinates);
     }
+  };
+
+  const handleInaccurateLocation = () => {
+    setHasAttemptedGPS(false);
+    setShowLocationDetails(false);
+    reset();
   };
 
   // Show loading state while fetching IP location
@@ -97,13 +105,12 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
       <motion.div
         animate={isSearchingGPS ? { scale: [1, 1.1, 1] } : {}}
         transition={{ duration: 1.5, repeat: isSearchingGPS ? Infinity : 0 }}
-        className={`w-20 h-20 rounded-sm flex items-center justify-center mb-6 border transition-colors ${
-          locationSource === "gps"
-            ? "bg-neon-green/10 border-neon-green/30"
-            : isSearchingGPS
+        className={`w-20 h-20 rounded-sm flex items-center justify-center mb-6 border transition-colors ${locationSource === "gps"
+          ? "bg-neon-green/10 border-neon-green/30"
+          : isSearchingGPS
             ? "bg-neon-yellow/10 border-neon-yellow/30"
             : "bg-neon-cyan/10 border-neon-cyan/30"
-        }`}
+          }`}
       >
         {isSearchingGPS ? (
           <Loader2 className="w-10 h-10 text-neon-yellow animate-spin" />
@@ -119,8 +126,8 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
         {isSearchingGPS
           ? "LOCATING..."
           : coordinates
-          ? "LOCATION DETECTED"
-          : "ENABLE LOCATION"}
+            ? "LOCATION DETECTED"
+            : "ENABLE LOCATION"}
       </h2>
 
       {/* Status message */}
@@ -184,45 +191,57 @@ export default function LocationStep({ onGranted }: LocationStepProps) {
 
       {/* Action buttons */}
       <div className="w-full space-y-3">
-        {/* Primary action: Get precise location with GPS */}
-        <Button
-          onClick={handleRequestPreciseLocation}
-          disabled={isSearchingGPS}
-          className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono"
-        >
-          {isSearchingGPS ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              GETTING LOCATION...
-            </>
-          ) : hasAttemptedGPS && locationSource === "gps" ? (
-            <>
+        {showLocationDetails && coordinates && !isSearchingGPS ? (
+          /* Verification state: Location is detected and displayed */
+          <>
+            <Button
+              onClick={() => onGranted(coordinates)}
+              className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono"
+            >
               <Check className="w-4 h-4 mr-2" />
-              GPS LOCATION ACQUIRED
-            </>
-          ) : (
-            <>
-              <Navigation className="w-4 h-4 mr-2" />
-              {hasAttemptedGPS ? "RETRY GPS" : "USE PRECISE LOCATION"}
-            </>
-          )}
-        </Button>
+              LOCATION IS ACCURATE
+            </Button>
 
-        {/* Secondary action: Continue with IP location */}
-        {ipLocation && !isSearchingGPS && (
-          <Button
-            onClick={handleContinueWithIPLocation}
-            variant="outline"
-            className="w-full border-cyber-border text-muted-foreground hover:text-neon-cyan hover:border-neon-cyan font-mono"
-          >
-            <MapPin className="w-4 h-4 mr-2" />
-            {hasAttemptedGPS ? "USE NETWORK LOCATION" : "SKIP - USE APPROXIMATE"}
-          </Button>
+            <Button
+              onClick={handleInaccurateLocation}
+              variant="outline"
+              className="w-full border-neon-red/50 text-neon-red hover:bg-neon-red hover:text-black hover:border-neon-red font-mono transition-colors"
+            >
+              <XIcon className="w-4 h-4 mr-2" />
+              LOCATION IS INACCURATE
+            </Button>
+          </>
+        ) : (
+          /* Initial State: Request location */
+          <>
+            <Button
+              onClick={handleRequestPreciseLocation}
+              disabled={isSearchingGPS}
+              className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono"
+            >
+              {isSearchingGPS ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  GETTING LOCATION...
+                </>
+              ) : hasAttemptedGPS && locationSource === "gps" ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  GPS LOCATION ACQUIRED
+                </>
+              ) : (
+                <>
+                  <Navigation className="w-4 h-4 mr-2" />
+                  {hasAttemptedGPS ? "RETRY GPS" : "USE PRECISE LOCATION"}
+                </>
+              )}
+            </Button>
+          </>
         )}
       </div>
 
       {/* Subtle hint about GPS vs Network */}
-      {ipLocation && !hasAttemptedGPS && (
+      {!showLocationDetails && ipLocation && !hasAttemptedGPS && (
         <p className="text-xs text-muted-foreground/50 mt-4 max-w-xs">
           GPS provides street-level accuracy. Network location is approximate (city-level).
         </p>

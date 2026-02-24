@@ -39,8 +39,8 @@ export default function FlowProgress({
                 backgroundColor: isComplete
                   ? "#00FF88"
                   : isCurrent
-                  ? "#00FFFF"
-                  : "#1a2632",
+                    ? "#00FFFF"
+                    : "#1a2632",
               }}
               className={cn(
                 "w-8 h-8 rounded-sm flex items-center justify-center",
@@ -48,8 +48,8 @@ export default function FlowProgress({
                 isComplete
                   ? "border-neon-green"
                   : isCurrent
-                  ? "border-neon-cyan"
-                  : "border-cyber-border"
+                    ? "border-neon-cyan"
+                    : "border-cyber-border"
               )}
             >
               {isComplete ? (
@@ -78,7 +78,7 @@ export default function FlowProgress({
 
             {/* Connector line */}
             {index < steps.length - 1 && (
-              <div className="w-8 sm:w-12 h-px mx-2 sm:mx-4 bg-cyber-border overflow-hidden">
+              <div className="flex-1 w-4 sm:w-12 h-px mx-1 sm:mx-4 bg-cyber-border overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: isComplete ? "100%" : "0%" }}

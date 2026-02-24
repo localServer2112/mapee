@@ -100,17 +100,25 @@ export default function HexbinLayer({
 
       polygon.bindTooltip(
         `
-        <div class="hexbin-tooltip-content">
-          <div class="font-bold text-sm mb-1">${hexbin.topISP}</div>
-          <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-            <span class="text-gray-400">Avg Latency:</span>
-            <span class="font-mono" style="color: ${baseColor}">${Math.round(hexbin.avgLatency)}ms</span>
-            <span class="text-gray-400">Scans:</span>
-            <span class="font-mono">${hexbin.pings.length}</span>
-            <span class="text-gray-400">Consistency:</span>
-            <span>${consistencyLabel}</span>
-            <span class="text-gray-400">Confidence:</span>
-            <span>${confidenceLabel}</span>
+        <div class="hexbin-tooltip-content text-gray-100 min-w-[160px]">
+          <div class="font-bold text-sm mb-2 text-neon-cyan border-b border-cyber-border pb-1">${hexbin.topISP}</div>
+          <div class="flex flex-col gap-y-1.5 text-xs">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Avg Latency:</span>
+              <span class="font-mono text-sm shadow-sm" style="color: ${baseColor}; font-weight: bold;">${Math.round(hexbin.avgLatency)}ms</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Scans:</span>
+              <span class="font-mono text-gray-200">${hexbin.pings.length}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Consistency:</span>
+              <span class="text-gray-200">${consistencyLabel}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Confidence:</span>
+              <span class="text-gray-200">${confidenceLabel}</span>
+            </div>
           </div>
         </div>
         `,

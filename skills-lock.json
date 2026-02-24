@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "code-review-pro": {
+      "source": "onewave-ai/claude-skills",
+      "sourceType": "github",
+      "computedHash": "445641e6b9eaa5a00f49060259fb4e23a8f339536ec7fc313e39b817dd402a51"
+    },
+    "frontend-design": {
+      "source": "jwynia/agent-skills",
+      "sourceType": "github",
+      "computedHash": "5134c5ef80c5c5fd52753d8d7be661859f0f44fbbaa4a6b2afe4222cfc96445d"
+    },
+    "nextjs-app-router-fundamentals": {
+      "source": "wsimmonds/claude-nextjs-skills",
+      "sourceType": "github",
+      "computedHash": "2d73efbbc227187a78d547d80e7e778d179048d592530dc9f69c8307eee6ae76"
+    }
+  }
+}

@@ -194,20 +194,47 @@ export function useLocationWaterfall(): UseLocationWaterfallReturn {
   const gpsAbortController = useRef<AbortController | null>(null);
 
   /**
-   * Initialize with IP-based location on mount
+   * Initialize location on mount: GPS first, IP fallback
    */
   useEffect(() => {
     if (isInitialized.current) return;
     isInitialized.current = true;
 
     const initializeLocation = async () => {
-      // Step 1: Get IP-based location immediately
-      const ipCoords = await fetchIPLocation();
+      // Start IP fetch in background (fallback)
+      const ipPromise = fetchIPLocation();
 
+      // Attempt browser geolocation (low accuracy first — uses Wi-Fi/cell, works on desktops)
+      setLocationSource("searching");
+      let gpsCoords = await getBrowserLocation(false, GPS_TIMEOUT);
+
+      // If low accuracy succeeded but is rough, try high accuracy
+      if (gpsCoords && gpsCoords.accuracy > 100) {
+        const highAcc = await getBrowserLocation(true, GPS_TIMEOUT);
+        if (highAcc && highAcc.accuracy < gpsCoords.accuracy) {
+          gpsCoords = highAcc;
+        }
+      }
+
+      if (gpsCoords) {
+        setGPSLocation(gpsCoords);
+        setCoordinates(gpsCoords);
+        setLocationSource("gps");
+
+        // Still save IP location for reference
+        const ipCoords = await ipPromise;
+        if (ipCoords) setIPLocation(ipCoords);
+        return;
+      }
+
+      // Geolocation failed — fall back to IP
+      const ipCoords = await ipPromise;
       if (ipCoords) {
         setIPLocation(ipCoords);
         setCoordinates(ipCoords);
         setLocationSource("ip");
+      } else {
+        setLocationSource("none");
       }
     };
 

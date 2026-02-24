@@ -14,9 +14,12 @@ interface PingMarkerProps {
 /**
  * Create a custom colored marker icon based on latency status
  */
-function createLatencyIcon(latencyMs: number): L.DivIcon {
+function createLatencyIcon(latencyMs: number, isExact: boolean): L.DivIcon {
   const status = getLatencyStatus(latencyMs);
   const color = getLatencyColor(status);
+
+  const borderStyle = isExact ? "solid" : "dashed";
+  const opacity = isExact ? "1" : "0.7";
 
   return L.divIcon({
     className: "custom-marker",
@@ -25,8 +28,9 @@ function createLatencyIcon(latencyMs: number): L.DivIcon {
         width: 24px;
         height: 24px;
         background-color: ${color};
-        border: 3px solid white;
+        border: 3px ${borderStyle} white;
         border-radius: 50%;
+        opacity: ${opacity};
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         transition: transform 0.2s ease;
       "
@@ -43,11 +47,12 @@ function createLatencyIcon(latencyMs: number): L.DivIcon {
 export default function PingMarker({ log, onClick }: PingMarkerProps) {
   const status = getLatencyStatus(log.latencyMs);
   const statusLabel = getLatencyLabel(status);
+  const isExact = log.isLocationExact ?? true;
 
   return (
     <Marker
       position={[log.lat, log.lng]}
-      icon={createLatencyIcon(log.latencyMs)}
+      icon={createLatencyIcon(log.latencyMs, isExact)}
       eventHandlers={{
         click: onClick,
       }}
@@ -63,6 +68,11 @@ export default function PingMarker({ log, onClick }: PingMarkerProps) {
               {statusLabel}
             </span>
           </div>
+          {!isExact && (
+            <div className="text-xs text-amber-600 dark:text-amber-400 mb-2 font-medium">
+              Geographic Region (Imprecise Location)
+            </div>
+          )}
           <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300">
             <div className="flex justify-between">
               <span>Latency:</span>

@@ -38,28 +38,18 @@ export default function AreaSummarySheet({
         className="h-[85vh] bg-cyber-black border-t border-neon-cyan/30 rounded-t-sm"
       >
         <SheetHeader className="pb-4 border-b border-cyber-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-sm bg-neon-green/10 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-neon-green" />
-              </div>
-              <div>
-                <SheetTitle className="text-neon-cyan text-lg font-mono">
-                  NETWORK HEALTH
-                </SheetTitle>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {hexbin.pings.length} scans in this area
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-sm bg-neon-green/10 flex items-center justify-center">
+              <MapPin className="w-5 h-5 text-neon-green" />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-neon-cyan"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <div>
+              <SheetTitle className="text-neon-cyan text-lg font-mono">
+                NETWORK HEALTH
+              </SheetTitle>
+              <p className="text-sm text-muted-foreground font-mono">
+                {hexbin.pings.length} scans in this area
+              </p>
+            </div>
           </div>
         </SheetHeader>
 

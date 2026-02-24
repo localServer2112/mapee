@@ -36,8 +36,8 @@ function sanitizeString(str: string, maxLength: number = 100): string {
  * Fetch ping logs within a bounding box
  */
 export async function GET(request: NextRequest) {
-  // Rate limiting
-  const rateLimitResult = apiRateLimits.dataFetch(request);
+  // Rate limiting (now async via Redis)
+  const rateLimitResult = await apiRateLimits.dataFetch(request);
   if (!rateLimitResult.success) {
     return createRateLimitResponse(rateLimitResult.reset);
   }
@@ -99,30 +99,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to frontend format (decrypt coordinates)
-    const pings: PingLog[] = (data || []).map((row: {
-      id: string;
-      lat_encrypted: string;
-      lng_encrypted: string;
-      lat_grid: number;
-      lng_grid: number;
-      reported_isp: string;
-      verified_asn: string | null;
-      latency_ms: number;
-      jitter: number;
-      upload_speed: number;
-      download_speed: number;
-      device_type: string;
-      created_at: string;
-    }) => {
+    const pingsPromises = (data || []).map(async (row: any) => {
       let lat: number;
       let lng: number;
+      let isLocationExact = true;
       try {
-        lat = decryptCoordinate(row.lat_encrypted);
-        lng = decryptCoordinate(row.lng_encrypted);
+        lat = await decryptCoordinate(row.lat_encrypted);
+        lng = await decryptCoordinate(row.lng_encrypted);
       } catch {
         // Fallback to grid coordinates (legacy or key-mismatched data)
         lat = row.lat_grid;
         lng = row.lng_grid;
+        isLocationExact = false;
       }
 
       return {
@@ -138,8 +126,11 @@ export async function GET(request: NextRequest) {
         deviceType: row.device_type as "mobile" | "tablet" | "desktop",
         userAgent: "",
         timestamp: new Date(row.created_at).getTime(),
+        isLocationExact,
       };
     });
+
+    const pings: PingLog[] = await Promise.all(pingsPromises);
 
     return NextResponse.json(pings, {
       headers: {
@@ -161,8 +152,8 @@ export async function GET(request: NextRequest) {
  * Submit a new ping log
  */
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const rateLimitResult = apiRateLimits.pingSubmit(request);
+  // Rate limiting (now async via Redis)
+  const rateLimitResult = await apiRateLimits.pingSubmit(request);
   if (!rateLimitResult.success) {
     return createRateLimitResponse(rateLimitResult.reset);
   }
@@ -228,8 +219,8 @@ export async function POST(request: NextRequest) {
 
     // Encrypt exact coordinates and compute grid coordinates for spatial queries
     const { lat_grid, lng_grid } = computeGridCoordinates(Number(lat), Number(lng));
-    const lat_encrypted = encryptCoordinate(Number(lat));
-    const lng_encrypted = encryptCoordinate(Number(lng));
+    const lat_encrypted = await encryptCoordinate(Number(lat));
+    const lng_encrypted = await encryptCoordinate(Number(lng));
 
     // Accept optional client-provided UUID for shareable report links
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

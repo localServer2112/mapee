@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   // Rate limiting
-  const rateLimitResult = apiRateLimits.dataFetch(request);
+  const rateLimitResult = await apiRateLimits.dataFetch(request);
   if (!rateLimitResult.success) {
     return createRateLimitResponse(rateLimitResult.reset);
   }

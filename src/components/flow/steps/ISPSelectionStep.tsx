@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Check, Wifi, Loader2 } from "lucide-react";
+import { Search, Check, Wifi, Loader2, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ISP_LIST } from "@/lib/constants";
@@ -17,6 +17,7 @@ interface ISPSelectionStepProps {
 export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedISP, setSelectedISP] = useState<string | null>(null);
+  const [verificationState, setVerificationState] = useState<"pending" | "inaccurate">("pending");
   const { asnInfo, isLoading: isDetecting, lookup } = useASNLookup();
 
   // Auto-detect ISP on mount
@@ -36,6 +37,8 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
 
   const detectedISP = asnInfo ? detectISP(asnInfo) : null;
   const isVerified = !!detectedISP;
+
+  const showVerificationPrompt = isVerified && verificationState === "pending";
 
   // Filter ISPs based on search query
   const filteredISPs = ISP_LIST.filter((isp) =>
@@ -121,61 +124,85 @@ export default function ISPSelectionStep({ onSelect }: ISPSelectionStepProps) {
         </motion.div>
       )}
 
-      {/* Search input */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-cyan" />
-        <Input
-          type="text"
-          placeholder="Search ISPs..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 font-mono"
-        />
-      </div>
-
-      {/* ISP List */}
-      <div className="max-h-48 overflow-y-auto space-y-1 mb-4 pr-1">
-        {filteredISPs.map((isp, index) => (
-          <motion.button
-            key={isp}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.03 }}
-            onClick={() => handleSelect(isp)}
-            className={cn(
-              "w-full px-4 py-2.5 rounded-sm text-left text-sm transition-colors font-mono",
-              "flex items-center justify-between",
-              selectedISP === isp
-                ? "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/50"
-                : "bg-cyber-dark text-muted-foreground border border-transparent",
-              !isVerified && selectedISP !== isp && "hover:bg-cyber-border",
-              // Disable other options if verified
-              isVerified && selectedISP !== isp && "opacity-30 cursor-not-allowed hover:bg-transparent"
-            )}
-            disabled={isVerified && selectedISP !== isp}
+      {/* Verification Actions OR Manual Selection */}
+      {showVerificationPrompt ? (
+        <div className="w-full space-y-3 mt-4">
+          <Button
+            onClick={handleContinue}
+            className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono"
           >
-            <span>{isp}</span>
-            {selectedISP === isp && (
-              <Check className="w-4 h-4 text-neon-cyan" />
-            )}
-          </motion.button>
-        ))}
+            <Check className="w-4 h-4 mr-2" />
+            YES, THIS IS MY ISP
+          </Button>
 
-        {filteredISPs.length === 0 && (
-          <div className="text-center py-4 text-muted-foreground text-sm font-mono">
-            NO ISPs FOUND
+          <Button
+            onClick={() => {
+              setVerificationState("inaccurate");
+              setSelectedISP(null);
+            }}
+            variant="outline"
+            className="w-full border-neon-red/50 text-neon-red hover:bg-neon-red hover:text-black hover:border-neon-red font-mono transition-colors"
+          >
+            <XIcon className="w-4 h-4 mr-2" />
+            NO, SELECT MANUALLY
+          </Button>
+        </div>
+      ) : (
+        <>
+          {/* Search input */}
+          <div className="relative mb-4 mt-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-cyan" />
+            <Input
+              type="text"
+              placeholder="Search ISPs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 font-mono"
+            />
           </div>
-        )}
-      </div>
 
-      {/* Continue button */}
-      <Button
-        onClick={handleContinue}
-        disabled={!selectedISP}
-        className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono disabled:opacity-50"
-      >
-        CONTINUE
-      </Button>
+          {/* ISP List */}
+          <div className="max-h-48 overflow-y-auto space-y-1 mb-4 pr-1">
+            {filteredISPs.map((isp, index) => (
+              <motion.button
+                key={isp}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.03 }}
+                onClick={() => handleSelect(isp)}
+                className={cn(
+                  "w-full px-4 py-2.5 rounded-sm text-left text-sm transition-colors font-mono",
+                  "flex items-center justify-between",
+                  selectedISP === isp
+                    ? "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/50"
+                    : "bg-cyber-dark text-muted-foreground border border-transparent",
+                  "hover:bg-cyber-border"
+                )}
+              >
+                <span>{isp}</span>
+                {selectedISP === isp && (
+                  <Check className="w-4 h-4 text-neon-cyan" />
+                )}
+              </motion.button>
+            ))}
+
+            {filteredISPs.length === 0 && (
+              <div className="text-center py-4 text-muted-foreground text-sm font-mono">
+                NO ISPs FOUND
+              </div>
+            )}
+          </div>
+
+          {/* Continue button */}
+          <Button
+            onClick={handleContinue}
+            disabled={!selectedISP}
+            className="w-full bg-neon-green hover:bg-neon-green/90 text-black font-bold font-mono disabled:opacity-50"
+          >
+            CONTINUE
+          </Button>
+        </>
+      )}
     </motion.div>
   );
 }

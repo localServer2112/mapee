@@ -27,7 +27,7 @@ export default function GlassOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
     >
       {/* Backdrop - darker, minimal blur */}
       <motion.div
@@ -45,10 +45,11 @@ export default function GlassOverlay({
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className={cn(
-          "relative z-10 w-full sm:max-w-md mx-4 mb-4 sm:mb-0",
-          "bg-cyber-black",
-          "border border-neon-cyan/20",
-          "rounded-sm shadow-2xl",
+          "relative z-10 w-full sm:max-w-md",
+          "bg-cyber-black border-t sm:border border-neon-cyan/20",
+          "shadow-[0_-5px_25px_-5px_rgba(0,0,0,0.5)] sm:shadow-2xl",
+          "rounded-t-2xl sm:rounded-sm",
+          "flex flex-col max-h-[90dvh] sm:max-h-[85vh]",
           "overflow-hidden",
           className
         )}
@@ -80,8 +81,8 @@ export default function GlassOverlay({
           </Button>
         )}
 
-        {/* Content */}
-        <div className="p-6">{children}</div>
+        {/* Content with scrolling */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
       </motion.div>
     </motion.div>
   );

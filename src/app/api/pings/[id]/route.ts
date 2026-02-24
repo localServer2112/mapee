@@ -42,8 +42,8 @@ export async function GET(
     let lat: number;
     let lng: number;
     try {
-      lat = decryptCoordinate(data.lat_encrypted);
-      lng = decryptCoordinate(data.lng_encrypted);
+      lat = await decryptCoordinate(data.lat_encrypted);
+      lng = await decryptCoordinate(data.lng_encrypted);
     } catch {
       lat = data.lat_grid;
       lng = data.lng_grid;
