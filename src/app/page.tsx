@@ -12,6 +12,7 @@ import { PingLog, HexBin, Coordinates, MapBounds, GeocodeResult } from "@/types"
 import FloatingActionButton from "@/components/overlays/FloatingActionButton";
 import NetworkTestFlow from "@/components/flow/NetworkTestFlow";
 import AreaSummarySheet from "@/components/overlays/AreaSummarySheet";
+import WelcomeExplainer from "@/components/overlays/WelcomeExplainer";
 import LocationSearch from "@/components/search/LocationSearch";
 import HeaderBar from "@/components/layout/HeaderBar";
 import { Button } from "@/components/ui/button";
@@ -428,6 +429,9 @@ export default function HomePage() {
         isOpen={isSheetOpen}
         onClose={handleSheetClose}
       />
+
+      {/* Welcome Explainer */}
+      <WelcomeExplainer />
     </main>
   );
 }
