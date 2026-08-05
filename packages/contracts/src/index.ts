@@ -5,6 +5,7 @@ export * from "./schemas/isp-ranking";
 export * from "./schemas/geocode";
 export * from "./schemas/tower";
 export * from "./schemas/network";
-export { registry } from "./registry";
+export * from "./schemas/config";
+export { registry, getConfigRoute } from "./registry";
 export { createApiClient } from "./client";
 export type { paths } from "./client";

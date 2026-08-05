@@ -13,12 +13,21 @@ import { ISPRankingSchema, ISPRankingsQuerySchema } from "./schemas/isp-ranking"
 import { GeocodeResultSchema, GeocodeQuerySchema } from "./schemas/geocode";
 import { CellTowerSchema, TowersQuerySchema } from "./schemas/tower";
 import { NetworkIdentifySchema } from "./schemas/network";
+import { ConfigSchema } from "./schemas/config";
 
 /**
  * The v1 surface — see plan §7.4. This registry is the map from "existing
- * five routes" to the renamed, versioned paths; it does not yet cover
- * /v1/config, /v1/installs, /v1/me/scans or /v1/measure/*, which land with
- * auth in a later phase (A4) once there's a server to authenticate against.
+ * five routes" to the renamed, versioned paths, plus /v1/config (new, no
+ * route to port from). It does not yet cover /v1/installs, /v1/me/scans, or
+ * /v1/measure/*, which land with auth in a later phase (A4) once there's a
+ * server to authenticate against.
+ *
+ * Routes apps/api actually implements (currently: config, geocode) are
+ * defined as named exports below rather than inline, so apps/api imports the
+ * exact same RouteConfig object this registry uses for spec generation —
+ * one definition, reused for both validation and documentation, per plan
+ * §7.3. Routes not yet implemented anywhere stay inline; there is nothing
+ * for a second consumer to import yet.
  */
 export const registry = new OpenAPIRegistry();
 
@@ -150,6 +159,21 @@ registry.registerPath({
     503: errorResponse("Provider not configured"),
   },
 });
+
+export const getConfigRoute = {
+  method: "get" as const,
+  path: "/v1/config",
+  summary: "Remote-tunable configuration",
+  description: "ISP list, thresholds, measurement endpoints, minSupportedVersion. See plan §7.4 and §7.9.",
+  tags: ["Config"],
+  responses: {
+    200: {
+      description: "Current configuration",
+      content: { "application/json": { schema: ConfigSchema } },
+    },
+  },
+};
+registry.registerPath(getConfigRoute);
 
 registry.registerPath({
   method: "get",

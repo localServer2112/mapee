@@ -461,6 +461,109 @@
           "cellId"
         ]
       },
+      "LatencyThresholds": {
+        "type": "object",
+        "properties": {
+          "good": {
+            "type": "integer",
+            "description": "ms; <= this is 'good'"
+          },
+          "fair": {
+            "type": "integer",
+            "description": "ms; <= this is 'fair', above is 'poor'"
+          }
+        },
+        "required": [
+          "good",
+          "fair"
+        ]
+      },
+      "DataFreshness": {
+        "type": "object",
+        "properties": {
+          "freshDays": {
+            "type": "integer"
+          },
+          "staleDays": {
+            "type": "integer"
+          },
+          "expiredDays": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "freshDays",
+          "staleDays",
+          "expiredDays"
+        ]
+      },
+      "MeasurementEndpoints": {
+        "type": "object",
+        "properties": {
+          "download": {
+            "type": "string",
+            "format": "uri",
+            "description": "Not a Mapee-hosted endpoint yet — see plan §6.2/§7.4. Points at a public third-party throughput-test endpoint until /v1/measure/* ships."
+          },
+          "upload": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "download",
+          "upload"
+        ]
+      },
+      "Config": {
+        "type": "object",
+        "properties": {
+          "ispList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The canonical ISP list. Currently mirrors ISP_LIST in @mapee/core verbatim.",
+            "example": [
+              "MTN Nigeria",
+              "Airtel Nigeria",
+              "Globacom (Glo)",
+              "9mobile",
+              "Spectranet",
+              "Swift Networks",
+              "ipNX",
+              "Starlink Nigeria",
+              "Tizeti (wifi.com.ng)",
+              "Cyberspace",
+              "MainOne",
+              "Coollink",
+              "Ngcom",
+              "Other"
+            ]
+          },
+          "latencyThresholds": {
+            "$ref": "#/components/schemas/LatencyThresholds"
+          },
+          "dataFreshness": {
+            "$ref": "#/components/schemas/DataFreshness"
+          },
+          "measurementEndpoints": {
+            "$ref": "#/components/schemas/MeasurementEndpoints"
+          },
+          "minSupportedVersion": {
+            "type": "string",
+            "description": "Semver floor for mobile clients. No mobile client exists yet (Track B), so this currently has no enforcement teeth — present so the contract shape is settled before it needs to bite.",
+            "example": "0.1.0"
+          }
+        },
+        "required": [
+          "ispList",
+          "latencyThresholds",
+          "dataFreshness",
+          "measurementEndpoints",
+          "minSupportedVersion"
+        ]
+      },
       "NetworkIdentify": {
         "type": "object",
         "properties": {
@@ -890,6 +993,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/config": {
+      "get": {
+        "summary": "Remote-tunable configuration",
+        "description": "ISP list, thresholds, measurement endpoints, minSupportedVersion. See plan §7.4 and §7.9.",
+        "tags": [
+          "Config"
+        ],
+        "responses": {
+          "200": {
+            "description": "Current configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
                 }
               }
             }
