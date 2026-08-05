@@ -22,6 +22,7 @@
     "@scalar/hono-api-reference": "^0.11.12",
     "@upstash/redis": "^1.36.2",
     "@upstash/ratelimit": "^2.0.8",
+    "whoiser": "^2.0.0-beta.10",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -144,8 +144,8 @@ export const getGeocodeRoute = {
 };
 registry.registerPath(getGeocodeRoute);
 
-registry.registerPath({
-  method: "get",
+export const getTowersRoute = {
+  method: "get" as const,
   path: "/v1/towers",
   summary: "Nearby cell towers within a bounding box",
   description: "Proxies OpenCelliD, clamped to its 4 sq km per-request limit.",
@@ -158,9 +158,11 @@ registry.registerPath({
     },
     400: errorResponse("Invalid bbox"),
     429: errorResponse("Rate limited"),
+    502: errorResponse("OpenCelliD returned an error"),
     503: errorResponse("Provider not configured"),
   },
-});
+};
+registry.registerPath(getTowersRoute);
 
 export const getConfigRoute = {
   method: "get" as const,
@@ -177,17 +179,18 @@ export const getConfigRoute = {
 };
 registry.registerPath(getConfigRoute);
 
-registry.registerPath({
-  method: "get",
+export const getNetworkIdentifyRoute = {
+  method: "get" as const,
   path: "/v1/network/identify",
   summary: "Identify the caller's ISP from their IP",
   description: "WHOIS + GeoIP dual lookup. Renamed from /api/asn — the old name described the lookup mechanism, not the purpose.",
   tags: ["Location"],
   responses: {
     200: {
-      description: "Best-effort network identity",
+      description: "Best-effort network identity. Always 200, even on lookup failure — see NetworkIdentifySchema's all-Unknown fallback shape.",
       content: { "application/json": { schema: NetworkIdentifySchema } },
     },
     429: errorResponse("Rate limited"),
   },
-});
+};
+registry.registerPath(getNetworkIdentifyRoute);

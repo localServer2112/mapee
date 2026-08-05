@@ -2,6 +2,8 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { health } from "./routes/health.js";
 import { config } from "./routes/config.js";
 import { geocode } from "./routes/geocode.js";
+import { towers } from "./routes/towers.js";
+import { networkIdentify } from "./routes/network-identify.js";
 import { docs } from "./routes/docs.js";
 import { errorEnvelope, validationErrorHook } from "./lib/errors.js";
 import { requestLogger, type LoggingVariables } from "./lib/logging.js";
@@ -21,6 +23,8 @@ app.use(requestLogger);
 app.route("/", health);
 app.route("/", config);
 app.route("/", geocode);
+app.route("/", towers);
+app.route("/", networkIdentify);
 app.route("/", docs);
 
 app.notFound((c) =>

@@ -997,6 +997,16 @@
               }
             }
           },
+          "502": {
+            "description": "OpenCelliD returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Provider not configured",
             "content": {
@@ -1040,7 +1050,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Best-effort network identity",
+            "description": "Best-effort network identity. Always 200, even on lookup failure — see NetworkIdentifySchema's all-Unknown fallback shape.",
             "content": {
               "application/json": {
                 "schema": {
