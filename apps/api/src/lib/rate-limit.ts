@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { Ratelimit, type Duration } from "@upstash/ratelimit";
-import { redis } from "./redis";
-import { getClientIP } from "./client-ip";
-import { errorEnvelope } from "./errors";
+import { redis } from "./redis.js";
+import { getClientIP } from "./client-ip.js";
+import { errorEnvelope } from "./errors.js";
 
 interface RateLimitConfig {
   interval: number; // ms

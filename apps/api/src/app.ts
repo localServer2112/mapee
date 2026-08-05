@@ -1,8 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { health } from "./routes/health";
-import { config } from "./routes/config";
-import { geocode } from "./routes/geocode";
-import { errorEnvelope, validationErrorHook } from "./lib/errors";
+import { health } from "./routes/health.js";
+import { config } from "./routes/config.js";
+import { geocode } from "./routes/geocode.js";
+import { errorEnvelope, validationErrorHook } from "./lib/errors.js";
 
 /**
  * The Hono app, separated from the Node server bootstrap in index.ts so

@@ -5,7 +5,7 @@ import {
   DATA_FRESHNESS,
 } from "@mapee/core";
 import { getConfigRoute, type Config } from "@mapee/contracts";
-import { validationErrorHook } from "../lib/errors";
+import { validationErrorHook } from "../lib/errors.js";
 
 export const config = new OpenAPIHono({ defaultHook: validationErrorHook });
 

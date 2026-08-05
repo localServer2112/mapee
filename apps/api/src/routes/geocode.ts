@@ -1,8 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { GeocodeResultSchema, getGeocodeRoute, type GeocodeResult } from "@mapee/contracts";
-import { validationErrorHook, errorEnvelope } from "../lib/errors";
-import { apiRateLimits, rateLimitResponse } from "../lib/rate-limit";
-import { redis } from "../lib/redis";
+import { validationErrorHook, errorEnvelope } from "../lib/errors.js";
+import { apiRateLimits, rateLimitResponse } from "../lib/rate-limit.js";
+import { redis } from "../lib/redis.js";
 
 /**
  * Ported from apps/web/src/app/api/geocode/route.ts. Behaviour is unchanged
