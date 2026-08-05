@@ -3,6 +3,7 @@ import { CellTowerSchema, getTowersRoute, type CellTower } from "@mapee/contract
 import { validationErrorHook, errorEnvelope } from "../lib/errors.js";
 import { apiRateLimits, rateLimitResponse } from "../lib/rate-limit.js";
 import { redis } from "../lib/redis.js";
+import { jsonWithETag } from "../lib/etag.js";
 
 /**
  * Ported from apps/web/src/app/api/towers/route.ts. Same OpenCelliD proxy,
@@ -100,7 +101,7 @@ towers.openapi(getTowersRoute, async (c) => {
   }
 
   if (cached) {
-    return c.json(cached, 200, {
+    return jsonWithETag(c, cached, {
       "X-Cache": "HIT",
       "X-RateLimit-Remaining": String(rateLimitResult.remaining),
     });
@@ -139,7 +140,7 @@ towers.openapi(getTowersRoute, async (c) => {
         // eslint-disable-next-line no-console
         console.error(JSON.stringify({ level: "error", msg: "tower cache write failed", err: String(e) }));
       }
-      return c.json([], 200, { "X-Cache": "MISS" });
+      return jsonWithETag(c, [], { "X-Cache": "MISS" });
     }
     return c.json(errorEnvelope("upstream_error", data.error), 502);
   }
@@ -174,7 +175,7 @@ towers.openapi(getTowersRoute, async (c) => {
     console.error(JSON.stringify({ level: "error", msg: "tower cache write failed", err: String(e) }));
   }
 
-  return c.json(parsed, 200, {
+  return jsonWithETag(c, parsed, {
     "X-Cache": "MISS",
     "X-RateLimit-Remaining": String(rateLimitResult.remaining),
   });

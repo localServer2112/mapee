@@ -19,6 +19,8 @@ export const ISPRankingSchema = z
   })
   .openapi("ISPRanking");
 
+export type ISPRanking = z.infer<typeof ISPRankingSchema>;
+
 export const ISPRankingsQuerySchema = z
   .object({
     region: z.string().optional().openapi({

@@ -12,6 +12,8 @@ export {
   getGeocodeRoute,
   getTowersRoute,
   getNetworkIdentifyRoute,
+  getAreasRoute,
+  getIspRankingsRoute,
 } from "./registry";
 export { createApiClient } from "./client";
 export type { paths } from "./client";

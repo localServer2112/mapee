@@ -36,8 +36,8 @@ const errorResponse = (description: string) => ({
   content: { "application/json": { schema: ErrorEnvelopeSchema } },
 });
 
-registry.registerPath({
-  method: "get",
+export const getAreasRoute = {
+  method: "get" as const,
   path: "/v1/areas",
   summary: "Aggregated map cells within a bounding box",
   description: "The primary map read. Backed by the hexbin_stats materialized view.",
@@ -48,10 +48,13 @@ registry.registerPath({
       description: "Aggregated cells",
       content: { "application/json": { schema: z.array(AreaSchema) } },
     },
+    304: { description: "Not modified — If-None-Match matched the current ETag" },
     400: errorResponse("Invalid bounding box"),
     429: errorResponse("Rate limited"),
+    500: errorResponse("Database error"),
   },
-});
+};
+registry.registerPath(getAreasRoute);
 
 registry.registerPath({
   method: "get",
@@ -110,8 +113,8 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "get",
+export const getIspRankingsRoute = {
+  method: "get" as const,
   path: "/v1/isp-rankings",
   summary: "ISP rankings by median latency",
   description: "Split out of the overloaded ?type= param on the legacy /api/stats route.",
@@ -122,8 +125,11 @@ registry.registerPath({
       description: "Rankings, fastest first",
       content: { "application/json": { schema: z.array(ISPRankingSchema) } },
     },
+    429: errorResponse("Rate limited"),
+    500: errorResponse("Database error"),
   },
-});
+};
+registry.registerPath(getIspRankingsRoute);
 
 export const getGeocodeRoute = {
   method: "get" as const,
@@ -156,6 +162,7 @@ export const getTowersRoute = {
       description: "Towers in bounds",
       content: { "application/json": { schema: z.array(CellTowerSchema) } },
     },
+    304: { description: "Not modified — If-None-Match matched the current ETag" },
     400: errorResponse("Invalid bbox"),
     429: errorResponse("Rate limited"),
     502: errorResponse("OpenCelliD returned an error"),

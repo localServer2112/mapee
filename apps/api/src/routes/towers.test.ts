@@ -103,6 +103,17 @@ describe("GET /v1/towers", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("returns a bodyless 304 on a repeat request with a matching If-None-Match", async () => {
+    const first = await app.request("/v1/towers?bbox=7.1,7.1,7.2,7.2");
+    const etag = first.headers.get("etag")!;
+    expect(etag).toBeTruthy();
+
+    const second = await app.request("/v1/towers?bbox=7.1,7.1,7.2,7.2", {
+      headers: { "If-None-Match": etag },
+    });
+    expect(second.status).toBe(304);
+  });
+
   it("is actually rate limited — apiRateLimits.towers is applied, unlike the legacy route", async () => {
     const res = await app.request("/v1/towers?bbox=6.52,3.37,6.53,3.38");
     expect(res.headers.get("x-ratelimit-remaining")).not.toBeNull();

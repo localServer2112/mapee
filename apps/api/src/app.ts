@@ -4,6 +4,8 @@ import { config } from "./routes/config.js";
 import { geocode } from "./routes/geocode.js";
 import { towers } from "./routes/towers.js";
 import { networkIdentify } from "./routes/network-identify.js";
+import { areas } from "./routes/areas.js";
+import { ispRankings } from "./routes/isp-rankings.js";
 import { docs } from "./routes/docs.js";
 import { errorEnvelope, validationErrorHook } from "./lib/errors.js";
 import { requestLogger, type LoggingVariables } from "./lib/logging.js";
@@ -25,6 +27,8 @@ app.route("/", config);
 app.route("/", geocode);
 app.route("/", towers);
 app.route("/", networkIdentify);
+app.route("/", areas);
+app.route("/", ispRankings);
 app.route("/", docs);
 
 app.notFound((c) =>

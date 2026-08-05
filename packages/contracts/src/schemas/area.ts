@@ -24,6 +24,8 @@ export const AreaSchema = z
   })
   .openapi("Area");
 
+export type Area = z.infer<typeof AreaSchema>;
+
 export const AreaListQuerySchema = z
   .object({
     bbox: z

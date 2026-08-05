@@ -639,6 +639,9 @@
               }
             }
           },
+          "304": {
+            "description": "Not modified — If-None-Match matched the current ETag"
+          },
           "400": {
             "description": "Invalid bounding box",
             "content": {
@@ -651,6 +654,16 @@
           },
           "429": {
             "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
             "content": {
               "application/json": {
                 "schema": {
@@ -862,6 +875,26 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -976,6 +1009,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Not modified — If-None-Match matched the current ETag"
           },
           "400": {
             "description": "Invalid bbox",
