@@ -39,5 +39,8 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated API client (build artifact — regenerate with `pnpm gen`)
+packages/contracts/generated/
+
 # local https certs for `next dev --experimental-https`
 certificates/

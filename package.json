@@ -12,8 +12,10 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
+    "gen": "pnpm --filter @mapee/contracts run generate:all",
     "web": "pnpm --filter @mapee/web",
-    "core": "pnpm --filter @mapee/core"
+    "core": "pnpm --filter @mapee/core",
+    "contracts": "pnpm --filter @mapee/contracts"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
