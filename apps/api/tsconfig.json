@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    // DOM is included for the Web Crypto API types (CryptoKey, BufferSource,
+    // crypto.subtle) that lib/encryption.ts needs — Node 20 provides the
+    // actual runtime global, but its own type declarations don't fully
+    // cover it without DOM. Nothing here uses window/document.
+    "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,

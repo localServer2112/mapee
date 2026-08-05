@@ -20,6 +20,7 @@
     "@hono/node-server": "^1.19.6",
     "@hono/zod-openapi": "^0.19.10",
     "@scalar/hono-api-reference": "^0.11.12",
+    "@supabase/supabase-js": "^2.39.0",
     "@upstash/redis": "^1.36.2",
     "@upstash/ratelimit": "^2.0.8",
     "whoiser": "^2.0.0-beta.10",
