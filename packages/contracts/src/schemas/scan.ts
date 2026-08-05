@@ -35,6 +35,8 @@ export const ScanSchema = z
   })
   .openapi("Scan");
 
+export type Scan = z.infer<typeof ScanSchema>;
+
 export const ScanDetailSchema = ScanSchema.extend({
   lat: LatSchema.openapi({ description: "Exact submitted location" }),
   lng: LngSchema.openapi({ description: "Exact submitted location" }),
@@ -43,6 +45,8 @@ export const ScanDetailSchema = ScanSchema.extend({
       "False only for legacy rows predating coordinate encryption, where decryption falls back to the grid-snapped value. Always true for new scans.",
   }),
 }).openapi("ScanDetail");
+
+export type ScanDetail = z.infer<typeof ScanDetailSchema>;
 
 export const ScanListQuerySchema = z
   .object({
@@ -54,7 +58,8 @@ export const ScanListQuerySchema = z
         example: "6.4,3.3,6.7,3.5",
       }),
     maxAge: z.coerce.number().int().min(1).max(90).default(30).openapi({
-      description: "Days. Capped at 90 regardless of requested value.",
+      description:
+        "Days, 1-90. Requests above 90 are rejected (400), not silently clamped — the legacy /api/pings route clamped instead, which can mask a client bug that meant to send a much smaller value.",
     }),
   })
   .openapi("ScanListQuery");

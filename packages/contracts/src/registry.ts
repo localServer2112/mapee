@@ -56,8 +56,8 @@ export const getAreasRoute = {
 };
 registry.registerPath(getAreasRoute);
 
-registry.registerPath({
-  method: "get",
+export const getScansRoute = {
+  method: "get" as const,
   path: "/v1/scans",
   summary: "Individual scans within a bounding box",
   description: "Returns grid-snapped coordinates, not exact ones. See ScanSchema.",
@@ -70,8 +70,10 @@ registry.registerPath({
     },
     400: errorResponse("Invalid bounding box"),
     429: errorResponse("Rate limited"),
+    500: errorResponse("Database error"),
   },
-});
+};
+registry.registerPath(getScansRoute);
 
 registry.registerPath({
   method: "post",
@@ -94,11 +96,12 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "get",
+export const getScanDetailRoute = {
+  method: "get" as const,
   path: "/v1/scans/{id}",
   summary: "A single scan, at exact precision",
-  description: "Exact coordinates are only ever returned here, and only to the submitting install once A4 auth lands.",
+  description:
+    "Exact coordinates are only ever returned here. Not yet restricted to the submitting install — that arrives with A4 auth; today this matches the legacy route's behavior of any shareable-link holder being able to view a scan's exact location.",
   tags: ["Scans"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -110,8 +113,11 @@ registry.registerPath({
     },
     400: errorResponse("Invalid id"),
     404: errorResponse("Not found"),
+    500: errorResponse("Stored data failed contract validation"),
+    503: errorResponse("Database not configured"),
   },
-});
+};
+registry.registerPath(getScanDetailRoute);
 
 export const getIspRankingsRoute = {
   method: "get" as const,

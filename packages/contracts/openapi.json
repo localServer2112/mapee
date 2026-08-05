@@ -700,7 +700,7 @@
               "minimum": 1,
               "maximum": 90,
               "default": 30,
-              "description": "Days. Capped at 90 regardless of requested value."
+              "description": "Days, 1-90. Requests above 90 are rejected (400), not silently clamped — the legacy /api/pings route clamped instead, which can mask a client bug that meant to send a much smaller value."
             },
             "required": false,
             "name": "maxAge",
@@ -733,6 +733,16 @@
           },
           "429": {
             "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
             "content": {
               "application/json": {
                 "schema": {
@@ -795,7 +805,7 @@
     "/v1/scans/{id}": {
       "get": {
         "summary": "A single scan, at exact precision",
-        "description": "Exact coordinates are only ever returned here, and only to the submitting install once A4 auth lands.",
+        "description": "Exact coordinates are only ever returned here. Not yet restricted to the submitting install — that arrives with A4 auth; today this matches the legacy route's behavior of any shareable-link holder being able to view a scan's exact location.",
         "tags": [
           "Scans"
         ],
@@ -833,6 +843,26 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Stored data failed contract validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database not configured",
             "content": {
               "application/json": {
                 "schema": {

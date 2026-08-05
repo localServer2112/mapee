@@ -28,6 +28,16 @@ CREATE TABLE IF NOT EXISTS ping_logs (
   download_speed DECIMAL(10, 2) NOT NULL CHECK (download_speed >= 0),
   device_type VARCHAR(20) NOT NULL CHECK (device_type IN ('mobile', 'tablet', 'desktop')),
   user_agent TEXT,
+  -- 'heuristic': speed derived from a latency-based formula, not measured
+  -- (see src/lib/speedtest.ts and rewrite plan §6.2/§7.5 item 2). 'measured'
+  -- is reserved for a real throughput test, which no client can perform yet
+  -- as of this column's introduction — every row today is 'heuristic', and
+  -- isp_rankings below filters to 'measured' only, so it returns nothing
+  -- until a client capable of a real measurement exists. That's the plan's
+  -- explicit intent, not an oversight: never present fabricated numbers as
+  -- if they were measured ISP rankings.
+  measurement_method VARCHAR(20) NOT NULL DEFAULT 'heuristic'
+    CHECK (measurement_method IN ('heuristic', 'measured')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT valid_lat_grid CHECK (lat_grid >= -90 AND lat_grid <= 90),
@@ -106,6 +116,9 @@ END;
 $$;
 
 -- ISP rankings view (SECURITY INVOKER so it runs with caller's permissions)
+-- Restricted to measurement_method = 'measured' -- see the column comment on
+-- ping_logs. Returns no rows until a client can perform a real throughput
+-- test; this is intentional, not a bug to "fix" by loosening the filter.
 CREATE OR REPLACE VIEW isp_rankings WITH (security_invoker = true) AS
 SELECT
   reported_isp as isp,
@@ -117,6 +130,7 @@ SELECT
   AVG(upload_speed)::DECIMAL(10, 2) as avg_upload
 FROM ping_logs
 WHERE created_at > NOW() - INTERVAL '30 days'
+  AND measurement_method = 'measured'
 GROUP BY reported_isp
 ORDER BY median_latency ASC;
 
@@ -141,6 +155,7 @@ RETURNS TABLE (
   upload_speed DECIMAL,
   download_speed DECIMAL,
   device_type VARCHAR,
+  measurement_method VARCHAR,
   created_at TIMESTAMPTZ
 )
 LANGUAGE plpgsql
@@ -161,6 +176,7 @@ BEGIN
     p.upload_speed,
     p.download_speed,
     p.device_type,
+    p.measurement_method,
     p.created_at
   FROM ping_logs p
   WHERE p.lat_grid BETWEEN south AND north
