@@ -51,3 +51,41 @@ jobs:
       # even when none of these integrations are configured.
       - name: Build
         run: pnpm build
+
+      # Guards the exact class of bug CRITICAL CONTEXT in apps/api/README.md
+      # describes: a change that typechecks and passes tests under tsx/vitest
+      # (both lenient about extensionless relative imports) but breaks when
+      # actually run, since apps/api's "type": "module" package.json means
+      # Node's own ESM loader is not lenient about it. Starts the real `start`
+      # script (tsx, not a `dist/` build — see the README for why) and hits
+      # the real HTTP server it boots, rather than trusting `app.fetch()`
+      # from within a test process.
+      - name: Smoke test apps/api actually starts
+        run: |
+          pnpm --filter @mapee/api start &
+          API_PID=$!
+
+          ready=false
+          for i in $(seq 1 20); do
+            if response=$(curl -sf http://localhost:8787/healthz); then
+              ready=true
+              break
+            fi
+            sleep 0.5
+          done
+
+          if [ "$ready" != "true" ]; then
+            echo "apps/api never responded to /healthz"
+            kill "$API_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          if [ "$response" != '{"status":"ok"}' ]; then
+            echo "unexpected /healthz response: $response"
+            kill "$API_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          kill "$API_PID"
+          wait "$API_PID" 2>/dev/null || true
+          echo "apps/api responded correctly and was stopped"

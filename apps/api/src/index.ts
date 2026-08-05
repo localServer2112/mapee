@@ -1,5 +1,8 @@
 import { serve } from "@hono/node-server";
 import { app } from "./app.js";
+import { initSentry } from "./lib/sentry.js";
+
+initSentry();
 
 const port = Number(process.env.PORT) || 8787;
 
