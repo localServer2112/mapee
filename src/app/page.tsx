@@ -13,6 +13,7 @@ import FloatingActionButton from "@/components/overlays/FloatingActionButton";
 import NetworkTestFlow from "@/components/flow/NetworkTestFlow";
 import AreaSummarySheet from "@/components/overlays/AreaSummarySheet";
 import WelcomeExplainer from "@/components/overlays/WelcomeExplainer";
+import LocationInsightsPanel from "@/components/overlays/LocationInsightsPanel";
 import LocationSearch from "@/components/search/LocationSearch";
 import HeaderBar from "@/components/layout/HeaderBar";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export default function HomePage() {
   const [isTestingActive, setIsTestingActive] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [searchedLocation, setSearchedLocation] = useState<GeocodeResult | null>(null);
 
   // Map methods for navigation (received via callback since dynamic() doesn't forward refs)
   const mapMethodsRef = useRef<MapRef | null>(null);
@@ -153,6 +155,8 @@ export default function HomePage() {
         mapMethodsRef.current.flyTo(result.lat, result.lng, 14);
       }
     }
+    // Set searched location for insights panel
+    setSearchedLocation(result);
     // Close mobile sidebar after search
     setIsMobileSidebarOpen(false);
   }, []);
@@ -428,6 +432,16 @@ export default function HomePage() {
         hexbin={state.selectedHexbin}
         isOpen={isSheetOpen}
         onClose={handleSheetClose}
+      />
+
+      {/* Location Insights Panel */}
+      <LocationInsightsPanel
+        locationName={searchedLocation?.displayName || null}
+        bounds={bounds}
+        logs={state.logs}
+        towers={state.towers}
+        isOpen={!!searchedLocation}
+        onClose={() => setSearchedLocation(null)}
       />
 
       {/* Welcome Explainer */}
