@@ -1,0 +1,36 @@
+{
+  "name": "@mapee/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "tsx src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mapee/core": "workspace:*",
+    "@mapee/contracts": "workspace:*",
+    "@sentry/node": "^10.69.0",
+    "hono": "^4.13.0",
+    "@hono/node-server": "^1.19.6",
+    "@hono/zod-openapi": "^0.19.10",
+    "@scalar/hono-api-reference": "^0.11.12",
+    "@upstash/redis": "^1.36.2",
+    "@upstash/ratelimit": "^2.0.8",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@typescript-eslint/eslint-plugin": "^7",
+    "@typescript-eslint/parser": "^7",
+    "eslint": "^8",
+    "tsx": "^4.19.2",
+    "typescript": "^5",
+    "vitest": "^2.1.8"
+  }
+}
