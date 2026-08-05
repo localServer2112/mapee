@@ -105,10 +105,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // OpenCelliD BBOX format: lon1,lat1,lon2,lat2
+    // OpenCelliD BBOX format: lat1,lon1,lat2,lon2
     const params = new URLSearchParams({
       token: apiKey,
-      BBOX: `${cSwLng},${cSwLat},${cNeLng},${cNeLat}`,
+      BBOX: `${cSwLat},${cSwLng},${cNeLat},${cNeLng}`,
       format: "json",
       limit: "200",
     });

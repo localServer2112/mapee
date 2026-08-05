@@ -1,4 +1,4 @@
-import { LatencyStatus } from "@/types";
+import { LatencyStatus } from "./types";
 import { LATENCY_THRESHOLDS } from "./constants";
 
 /**
@@ -11,30 +11,6 @@ export function getLatencyStatus(latencyMs: number): LatencyStatus {
 }
 
 /**
- * Get the color for a latency status
- */
-export function getLatencyColor(status: LatencyStatus): string {
-  const colors = {
-    good: "#00FF88", // neon-green
-    fair: "#FFD600", // neon-yellow
-    poor: "#FF3366", // neon-red
-  };
-  return colors[status];
-}
-
-/**
- * Get the Tailwind class for a latency status
- */
-export function getLatencyColorClass(status: LatencyStatus): string {
-  const classes = {
-    good: "bg-ping-good",
-    fair: "bg-ping-fair",
-    poor: "bg-ping-poor",
-  };
-  return classes[status];
-}
-
-/**
  * Get a human-readable label for a latency status
  */
 export function getLatencyLabel(status: LatencyStatus): string {
@@ -44,20 +20,6 @@ export function getLatencyLabel(status: LatencyStatus): string {
     poor: "Poor",
   };
   return labels[status];
-}
-
-/**
- * Get the badge variant for a latency status
- */
-export function getLatencyBadgeVariant(
-  status: LatencyStatus
-): "default" | "secondary" | "destructive" {
-  const variants = {
-    good: "default" as const,
-    fair: "secondary" as const,
-    poor: "destructive" as const,
-  };
-  return variants[status];
 }
 
 /**

@@ -1,4 +1,28 @@
-// Core data types for Mapee
+// Domain entities shared across every Mapee client and the API.
+//
+// Nothing here may reference a browser, React, or server API — this module is
+// consumed by the web app, the API service, and (once ported to Dart) mobile.
+// Client-local state shapes live with their client, not here.
+
+export type DeviceType = "mobile" | "tablet" | "desktop";
+
+export type LatencyStatus = "good" | "fair" | "poor";
+
+/** How a scan's throughput figures were produced. */
+export type MeasurementMethod = "heuristic" | "measured";
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+  accuracy: number;
+}
+
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
 
 export interface PingLog {
   id: string;
@@ -14,18 +38,6 @@ export interface PingLog {
   deviceType: DeviceType;
   userAgent: string;
   isLocationExact?: boolean;
-}
-
-export type DeviceType = "mobile" | "tablet" | "desktop";
-
-export type LatencyStatus = "good" | "fair" | "poor";
-
-export type FlowStep = "location" | "isp" | "testing" | "success";
-
-export interface Coordinates {
-  lat: number;
-  lng: number;
-  accuracy: number;
 }
 
 export interface NetworkTestResult {
@@ -74,32 +86,3 @@ export interface GeocodeResult {
   lng: number;
   boundingBox?: [number, number, number, number];
 }
-
-export interface MapBounds {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}
-
-// State types
-export interface PingLogState {
-  logs: PingLog[];
-  pendingSync: PingLog[];
-  myPingIds: string[];
-  isOnline: boolean;
-  selectedHexbin: HexBin | null;
-  showTowers: boolean;
-  towers: CellTower[];
-}
-
-export type PingLogAction =
-  | { type: "ADD_LOG"; payload: PingLog }
-  | { type: "SYNC_COMPLETE"; payload: string[] }
-  | { type: "LOAD_CACHED"; payload: PingLog[] }
-  | { type: "SET_ONLINE"; payload: boolean }
-  | { type: "SELECT_HEXBIN"; payload: HexBin | null }
-  | { type: "TOGGLE_TOWERS" }
-  | { type: "SET_TOWERS"; payload: CellTower[] }
-  | { type: "ADD_MY_PING"; payload: string }
-  | { type: "LOAD_MY_PINGS"; payload: string[] };

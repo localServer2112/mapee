@@ -1,5 +1,5 @@
 import { ISP_LIST } from "./constants";
-import { ASNInfo } from "@/types";
+import { ASNInfo } from "./types";
 
 /**
  * Normalizes a string for comparison:
@@ -52,8 +52,11 @@ export function detectISP(asnInfo: ASNInfo): typeof ISP_LIST[number] | null {
         const normalizedSource = normalize(source);
 
         for (const [pattern, ispName] of Object.entries(ISP_PATTERNS)) {
-            // Check if normalized pattern exists in normalized source
-            if (normalizedSource.includes(pattern)) {
+            // Normalize the pattern too, not just the source. The comment below
+            // used to claim this happened but it did not, which made any pattern
+            // containing punctuation unmatchable: normalize() strips dots, so
+            // "wifi.com.ng" could never be found in a haystack of "wificomng".
+            if (normalizedSource.includes(normalize(pattern))) {
                 return ispName;
             }
         }
