@@ -12,10 +12,11 @@
     "generate": "tsx src/generate.ts",
     "generate:client": "openapi-typescript openapi.json -o generated/api.d.ts",
     "generate:all": "pnpm run generate && pnpm run generate:client",
+    "build": "pnpm run generate:client",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm run generate:client && tsc --noEmit"
   },
   "dependencies": {
     "@mapee/core": "workspace:*",
