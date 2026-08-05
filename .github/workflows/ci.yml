@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check OpenAPI spec is up to date
+        run: |
+          pnpm --filter @mapee/contracts run generate
+          git diff --exit-code -- packages/contracts/openapi.json
+
       - name: Typecheck
         run: pnpm typecheck
 

@@ -6,3 +6,5 @@ export * from "./schemas/geocode";
 export * from "./schemas/tower";
 export * from "./schemas/network";
 export { registry } from "./registry";
+export { createApiClient } from "./client";
+export type { paths } from "./client";
