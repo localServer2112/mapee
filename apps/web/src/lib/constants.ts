@@ -1,40 +1,19 @@
-export const ISP_LIST = [
-  "MTN Nigeria",
-  "Airtel Nigeria",
-  "Globacom (Glo)",
-  "9mobile",
-  "Spectranet",
-  "Swift Networks",
-  "ipNX",
-  "Starlink Nigeria",
-  "Tizeti (wifi.com.ng)",
-  "Cyberspace",
-  "MainOne",
-  "Coollink",
-  "Ngcom",
-  "Other",
-] as const;
+// Domain constants (ISP list, latency thresholds, freshness weights, grid size)
+// now live in @mapee/core. Re-exported so existing `@/lib/constants` imports
+// keep working; prefer importing from @mapee/core in new code.
+export {
+  ISP_LIST,
+  LATENCY_THRESHOLDS,
+  DATA_FRESHNESS,
+  GRID,
+  TEST_ENDPOINTS,
+} from "@mapee/core";
+export type { ISPName } from "@mapee/core";
 
-export type ISPName = (typeof ISP_LIST)[number];
-
-export const TEST_ENDPOINTS = {
-  // Use a fast, reliable endpoint for latency testing
-  // Google's favicon is small (~1KB) and highly available
-  PING_URL: "https://www.google.com/favicon.ico",
-  // Backup endpoint
-  BACKUP_URL: "https://www.cloudflare.com/favicon.ico",
-};
-
-export const LATENCY_THRESHOLDS = {
-  GOOD: 50, // ms - anything under is "good"
-  FAIR: 150, // ms - anything under is "fair", above is "poor"
-};
-
-export const DATA_FRESHNESS = {
-  FRESH_DAYS: 7, // Full weight (1.0)
-  STALE_DAYS: 30, // Reduced weight (0.5)
-  EXPIRED_DAYS: 30, // Ignored (0)
-};
+// ---------------------------------------------------------------------------
+// Web-client config. Not domain data — browser storage keys, Leaflet tile
+// sources, and this app's own route paths. Mobile has its own equivalents.
+// ---------------------------------------------------------------------------
 
 export const STORAGE_KEYS = {
   PING_LOGS: "mapee-ping-logs",

@@ -1,4 +1,4 @@
-import { PingLog } from "@/types";
+import { PingLog } from "./types";
 import { DATA_FRESHNESS } from "./constants";
 import { calculateJitter } from "./latency";
 

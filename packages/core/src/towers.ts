@@ -1,4 +1,4 @@
-import { CellTower, PingLog } from "@/types";
+import { CellTower } from "./types";
 
 /**
  * Cell Tower Utilities

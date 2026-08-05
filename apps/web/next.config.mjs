@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // @mapee/core is published as TypeScript source rather than a build artifact,
+  // so Next has to compile it as part of this app.
+  transpilePackages: ["@mapee/core"],
   async headers() {
     return [
       {
