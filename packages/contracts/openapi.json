@@ -929,6 +929,16 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Nominatim (the upstream geocoding provider) failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }

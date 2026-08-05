@@ -125,8 +125,8 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "get",
+export const getGeocodeRoute = {
+  method: "get" as const,
   path: "/v1/geocode",
   summary: "Forward geocode a place name",
   description: "Proxies Nominatim. Renamed 'countrycodes' query param to 'country'.",
@@ -139,8 +139,10 @@ registry.registerPath({
     },
     400: errorResponse("Query too short or missing"),
     429: errorResponse("Rate limited"),
+    500: errorResponse("Nominatim (the upstream geocoding provider) failed"),
   },
-});
+};
+registry.registerPath(getGeocodeRoute);
 
 registry.registerPath({
   method: "get",

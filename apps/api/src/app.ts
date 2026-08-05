@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { health } from "./routes/health";
 import { config } from "./routes/config";
+import { geocode } from "./routes/geocode";
 import { errorEnvelope, validationErrorHook } from "./lib/errors";
 
 /**
@@ -14,6 +15,7 @@ export const app = new OpenAPIHono({
 
 app.route("/", health);
 app.route("/", config);
+app.route("/", geocode);
 
 app.notFound((c) =>
   c.json(errorEnvelope("not_found", "No route matches this path"), 404)

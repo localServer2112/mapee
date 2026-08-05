@@ -26,6 +26,12 @@ importers:
       '@mapee/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@upstash/ratelimit':
+        specifier: ^2.0.8
+        version: 2.0.8(@upstash/redis@1.38.2)
+      '@upstash/redis':
+        specifier: ^1.36.2
+        version: 1.38.2
       hono:
         specifier: ^4.13.0
         version: 4.13.0
