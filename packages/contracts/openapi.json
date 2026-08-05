@@ -1,0 +1,933 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mapee API",
+    "version": "1.0.0",
+    "description": "Crowdsourced network-quality data. Generated from packages/contracts/src — do not hand-edit openapi.json."
+  },
+  "servers": [
+    {
+      "url": "https://api.mapee.app",
+      "description": "Production (planned)"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Area": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "centerLat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 6.5244
+          },
+          "centerLng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 3.3792
+          },
+          "avgLatency": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minLatency": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxLatency": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scanCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "topISP": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "consistency": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "centerLat",
+          "centerLng",
+          "avgLatency",
+          "minLatency",
+          "maxLatency",
+          "scanCount",
+          "topISP",
+          "confidence",
+          "consistency"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "invalid_bounds"
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid bounding box coordinates"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ISPName": {
+        "type": "string",
+        "enum": [
+          "MTN Nigeria",
+          "Airtel Nigeria",
+          "Globacom (Glo)",
+          "9mobile",
+          "Spectranet",
+          "Swift Networks",
+          "ipNX",
+          "Starlink Nigeria",
+          "Tizeti (wifi.com.ng)",
+          "Cyberspace",
+          "MainOne",
+          "Coollink",
+          "Ngcom",
+          "Other"
+        ]
+      },
+      "DeviceType": {
+        "type": "string",
+        "enum": [
+          "mobile",
+          "tablet",
+          "desktop"
+        ]
+      },
+      "Scan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Grid-snapped to ~500m; not the submitter's exact location",
+            "example": 6.5244
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Grid-snapped to ~500m; not the submitter's exact location",
+            "example": 3.3792
+          },
+          "reportedISP": {
+            "$ref": "#/components/schemas/ISPName"
+          },
+          "verifiedASN": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "jitter": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "uploadSpeed": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Mbps"
+          },
+          "downloadSpeed": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Mbps"
+          },
+          "measurementMethod": {
+            "type": "string",
+            "enum": [
+              "heuristic",
+              "measured"
+            ],
+            "description": "'heuristic' rows predate real throughput measurement and are excluded from ISP rankings. See plan §6.2 and §7.5 item 2."
+          },
+          "deviceType": {
+            "$ref": "#/components/schemas/DeviceType"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix ms"
+          }
+        },
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "reportedISP",
+          "verifiedASN",
+          "latencyMs",
+          "jitter",
+          "uploadSpeed",
+          "downloadSpeed",
+          "measurementMethod",
+          "deviceType",
+          "timestamp"
+        ]
+      },
+      "CreateScanResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "success",
+          "id",
+          "timestamp"
+        ]
+      },
+      "CreateScanRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 6.5244
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 3.3792
+          },
+          "reportedISP": {
+            "$ref": "#/components/schemas/ISPName"
+          },
+          "verifiedASN": {
+            "type": "string"
+          },
+          "latencyMs": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "jitter": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "uploadSpeed": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "downloadSpeed": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "deviceType": {
+            "$ref": "#/components/schemas/DeviceType"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "reportedISP",
+          "latencyMs",
+          "jitter",
+          "uploadSpeed",
+          "downloadSpeed",
+          "deviceType"
+        ]
+      },
+      "ScanDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Scan"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90,
+                "description": "Exact submitted location",
+                "example": 6.5244
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180,
+                "description": "Exact submitted location",
+                "example": 3.3792
+              },
+              "isLocationExact": {
+                "type": "boolean",
+                "description": "False only for legacy rows predating coordinate encryption, where decryption falls back to the grid-snapped value. Always true for new scans."
+              }
+            },
+            "required": [
+              "isLocationExact"
+            ]
+          }
+        ]
+      },
+      "ISPRanking": {
+        "type": "object",
+        "properties": {
+          "isp": {
+            "$ref": "#/components/schemas/ISPName"
+          },
+          "avgLatency": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "medianLatency": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "avgJitter": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sampleCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "avgDownload": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Mbps"
+          },
+          "avgUpload": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Mbps"
+          }
+        },
+        "required": [
+          "isp",
+          "avgLatency",
+          "medianLatency",
+          "avgJitter",
+          "sampleCount",
+          "avgDownload",
+          "avgUpload"
+        ]
+      },
+      "GeocodeResult": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 6.5244
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 3.3792
+          },
+          "boundingBox": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "[south, north, west, east] — Nominatim's order, kept as-is"
+          }
+        },
+        "required": [
+          "displayName",
+          "lat",
+          "lng"
+        ]
+      },
+      "CellTower": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "mcc-mnc-lac-cellId"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 6.5244
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 3.3792
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "4G",
+              "5G"
+            ]
+          },
+          "mcc": {
+            "type": "integer"
+          },
+          "mnc": {
+            "type": "integer"
+          },
+          "lac": {
+            "type": "integer"
+          },
+          "cellId": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "type",
+          "mcc",
+          "mnc",
+          "lac",
+          "cellId"
+        ]
+      },
+      "NetworkIdentify": {
+        "type": "object",
+        "properties": {
+          "isp": {
+            "type": "string"
+          },
+          "as": {
+            "type": "string"
+          },
+          "asname": {
+            "type": "string"
+          },
+          "org": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "isp",
+          "as",
+          "asname",
+          "org"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/areas": {
+      "get": {
+        "summary": "Aggregated map cells within a bounding box",
+        "description": "The primary map read. Backed by the hexbin_stats materialized view.",
+        "tags": [
+          "Map"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?$",
+              "description": "south,west,north,east",
+              "example": "6.4,3.3,6.7,3.5"
+            },
+            "required": true,
+            "name": "bbox",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 22,
+              "description": "Reserved for zoom-aware aggregation precision (plan §7.4); unused until a zoom-dependent grid exists server-side."
+            },
+            "required": false,
+            "name": "zoom",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated cells",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Area"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid bounding box",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/scans": {
+      "get": {
+        "summary": "Individual scans within a bounding box",
+        "description": "Returns grid-snapped coordinates, not exact ones. See ScanSchema.",
+        "tags": [
+          "Map"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?$",
+              "description": "south,west,north,east",
+              "example": "6.4,3.3,6.7,3.5"
+            },
+            "required": true,
+            "name": "bbox",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 30,
+              "description": "Days. Capped at 90 regardless of requested value."
+            },
+            "required": false,
+            "name": "maxAge",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scans in bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Scan"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid bounding box",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Submit a scan",
+        "description": "Requires an install token once auth lands in A4. Idempotent on client-supplied id.",
+        "tags": [
+          "Scans"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scan recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateScanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure — see details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/scans/{id}": {
+      "get": {
+        "summary": "A single scan, at exact precision",
+        "description": "Exact coordinates are only ever returned here, and only to the submitting install once A4 auth lands.",
+        "tags": [
+          "Scans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The scan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/isp-rankings": {
+      "get": {
+        "summary": "ISP rankings by median latency",
+        "description": "Split out of the overloaded ?type= param on the legacy /api/stats route.",
+        "tags": [
+          "Insights"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Reserved for regional filtering (plan §12.4); unfiltered until a region dimension exists server-side."
+            },
+            "required": false,
+            "name": "region",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rankings, fastest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ISPRanking"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/geocode": {
+      "get": {
+        "summary": "Forward geocode a place name",
+        "description": "Proxies Nominatim. Renamed 'countrycodes' query param to 'country'.",
+        "tags": [
+          "Location"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "description": "ISO 3166-1 alpha-2, e.g. 'ng'. Renamed from 'countrycodes'."
+            },
+            "required": false,
+            "name": "country",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Candidate locations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GeocodeResult"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query too short or missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/towers": {
+      "get": {
+        "summary": "Nearby cell towers within a bounding box",
+        "description": "Proxies OpenCelliD, clamped to its 4 sq km per-request limit.",
+        "tags": [
+          "Location"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?$",
+              "description": "sw_lat,sw_lng,ne_lat,ne_lng — clamped server-side to OpenCelliD's 4 sq km per-request limit",
+              "example": "6.52,3.37,6.53,3.38"
+            },
+            "required": true,
+            "name": "bbox",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Towers in bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CellTower"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid bbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/network/identify": {
+      "get": {
+        "summary": "Identify the caller's ISP from their IP",
+        "description": "WHOIS + GeoIP dual lookup. Renamed from /api/asn — the old name described the lookup mechanism, not the purpose.",
+        "tags": [
+          "Location"
+        ],
+        "responses": {
+          "200": {
+            "description": "Best-effort network identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkIdentify"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
