@@ -219,7 +219,7 @@ BEGIN
     h.min_latency,
     h.max_latency,
     h.ping_count,
-    h.top_isp,
+    h.top_isp::TEXT,
     h.confidence_score,
     h.consistency
   FROM hexbin_stats h
@@ -229,20 +229,32 @@ END;
 $$;
 
 -- Row Level Security (RLS) policies
+--
+-- Postgres has no CREATE POLICY IF NOT EXISTS -- unlike every other
+-- statement in this file (CREATE TABLE/INDEX/FUNCTION/VIEW all have an
+-- IF NOT EXISTS or OR REPLACE form), a bare CREATE POLICY is not
+-- idempotent and errors on a second run. Found by actually re-running
+-- this file against a real database, which is exactly the scenario a
+-- schema file needs to survive. DROP POLICY IF EXISTS first make each
+-- one safe to re-run, matching how every other object here already behaves.
 ALTER TABLE ping_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow anyone to insert (anonymous submissions)
+DROP POLICY IF EXISTS "Allow anonymous inserts" ON ping_logs;
 CREATE POLICY "Allow anonymous inserts" ON ping_logs
   FOR INSERT WITH CHECK (true);
 
 -- Allow anyone to read
+DROP POLICY IF EXISTS "Allow public read" ON ping_logs;
 CREATE POLICY "Allow public read" ON ping_logs
   FOR SELECT USING (true);
 
 -- Prevent updates and deletes (immutable logs)
+DROP POLICY IF EXISTS "Prevent updates" ON ping_logs;
 CREATE POLICY "Prevent updates" ON ping_logs
   FOR UPDATE USING (false);
 
+DROP POLICY IF EXISTS "Prevent deletes" ON ping_logs;
 CREATE POLICY "Prevent deletes" ON ping_logs
   FOR DELETE USING (false);
 
