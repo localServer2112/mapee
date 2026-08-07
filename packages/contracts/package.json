@@ -11,6 +11,7 @@
   "scripts": {
     "generate": "tsx src/generate.ts",
     "generate:client": "openapi-typescript openapi.json -o generated/api.d.ts",
+    "generate:dart-client": "npx --yes @openapitools/openapi-generator-cli@2.40.1 generate -i openapi.json -g dart-dio -o ../../apps/mobile/packages/mapee_api --additional-properties=pubName=mapee_api,pubLibrary=mapee_api && cd ../../apps/mobile/packages/mapee_api && dart pub get && dart run build_runner build --delete-conflicting-outputs",
     "generate:all": "pnpm run generate && pnpm run generate:client",
     "build": "pnpm run generate:client",
     "lint": "eslint src --ext .ts",

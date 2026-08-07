@@ -94,3 +94,54 @@ jobs:
           kill "$API_PID"
           wait "$API_PID" 2>/dev/null || true
           echo "apps/api responded correctly and was stopped"
+
+  mobile:
+    name: Mobile — analyze, test, build (Track B Phase 0)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java (for openapi-generator-cli)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # apps/mobile/packages/mapee_api is generated, not committed (mirrors
+      # the generated TS client's git-ignored status) -- CI regenerates it
+      # from the committed openapi.json, same as `generate:dart-client`
+      # (packages/contracts/package.json) does locally. This is also a
+      # drift check: if the spec and the mobile code have diverged, this is
+      # where a broken route/model shows up.
+      - name: Generate Dart API client
+        run: |
+          npx --yes @openapitools/openapi-generator-cli@2.40.1 generate \
+            -i packages/contracts/openapi.json \
+            -g dart-dio \
+            -o apps/mobile/packages/mapee_api \
+            --additional-properties=pubName=mapee_api,pubLibrary=mapee_api
+          cd apps/mobile/packages/mapee_api
+          dart pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Install mobile dependencies
+        run: cd apps/mobile && flutter pub get
+
+      - name: Analyze
+        run: cd apps/mobile && flutter analyze
+
+      - name: Test
+        run: cd apps/mobile && flutter test
+
+      # Android only for now: a real compiled artifact, no codesigning
+      # needed, runs on the same ubuntu runner as everything else above.
+      # iOS builds need a macOS runner and codesigning setup -- deferred
+      # until that's actually worth the extra CI cost.
+      - name: Build (Android debug APK)
+        run: cd apps/mobile && flutter build apk --debug
