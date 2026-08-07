@@ -136,8 +136,16 @@ jobs:
       - name: Analyze
         run: cd apps/mobile && flutter analyze
 
+      # test/design/golden/**'s baseline PNGs were generated locally on
+      # macOS; ubuntu-latest's Skia/font rendering produces small (~0.02-0.12%)
+      # pixel diffs against them on every single golden test, confirmed by
+      # actually seeing a real CI run fail this way -- not a real visual
+      # regression, a cross-platform rendering mismatch. Golden tests stay a
+      # local pre-merge check (`flutter test test/design/golden`) rather than
+      # a CI one, short of running CI in a container matching the exact
+      # environment the baselines were generated in.
       - name: Test
-        run: cd apps/mobile && flutter test
+        run: cd apps/mobile && flutter test $(find test -name '*_test.dart' -not -path '*/golden/*')
 
       # Android only for now: a real compiled artifact, no codesigning
       # needed, runs on the same ubuntu runner as everything else above.
