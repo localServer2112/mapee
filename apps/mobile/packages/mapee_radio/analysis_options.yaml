@@ -1,4 +1,20 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # A separate, independently-runnable Flutter app for manually testing
+    # this plugin -- needs its own `flutter pub get` in its own directory to
+    # analyze cleanly, which neither this analysis context nor the consuming
+    # apps/mobile app's CI job ever runs. This file's own excludes are what
+    # actually apply here: apps/mobile/analysis_options.yaml's excludes for
+    # these same paths don't reach into this package's separate analysis
+    # context, confirmed by that fix alone not being enough in a real run.
+    - example/**
+    # Pigeon's own input spec, consumed by the `pigeon` code-generator (a
+    # devDependency here, not a runtime one) -- not meant to compile/analyze
+    # as ordinary Dart. Its annotations (@ConfigurePigeon, HostApi(), etc.)
+    # only exist while pigeon itself is running the generator.
+    - pigeons/**
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
