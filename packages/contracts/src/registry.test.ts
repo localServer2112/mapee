@@ -3,11 +3,12 @@ import { OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
 import { registry } from "./registry";
 
 describe("registry", () => {
-  it("registers the seven v1 paths ported from the existing five routes, plus /v1/config", () => {
+  it("registers the seven v1 paths ported from the existing five routes, plus /v1/config and A4's auth/write routes", () => {
     // /api/pings splits into 3 (list, detail, create) and /api/stats splits
     // into 2 (areas, isp-rankings); /api/geocode, /api/towers, /api/asn stay
-    // 1:1. 5 routes -> 7 v1 paths. Plus /v1/config, which has no route to
-    // port from (plan §7.4). Pinned so an accidental drop is caught.
+    // 1:1. 5 routes -> 7 v1 paths. Plus /v1/config (no route to port from,
+    // plan §7.4) and A4's /v1/installs + /v1/me/scans (plan §7.6). Pinned so
+    // an accidental drop is caught.
     const paths = new Set(
       registry.definitions
         .filter((d): d is Extract<typeof d, { type: "route" }> => d.type === "route")
@@ -25,6 +26,9 @@ describe("registry", () => {
         "GET /v1/towers",
         "GET /v1/network/identify",
         "GET /v1/config",
+        "POST /v1/installs",
+        "GET /v1/me/scans",
+        "DELETE /v1/me/scans",
       ])
     );
   });
@@ -37,7 +41,7 @@ describe("registry", () => {
     });
 
     expect(doc.openapi).toBe("3.1.0");
-    expect(Object.keys(doc.paths ?? {})).toHaveLength(8);
+    expect(Object.keys(doc.paths ?? {})).toHaveLength(10);
   });
 
   it("every registered response references a schema that round-trips a realistic example", () => {

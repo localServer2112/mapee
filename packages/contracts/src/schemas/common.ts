@@ -24,6 +24,19 @@ export const DeviceTypeSchema = z.enum(["mobile", "tablet", "desktop"]).openapi(
  * string for client branching; `message` is safe to show a user; `details` is
  * free-form and present only for validation failures.
  */
+/**
+ * Every write endpoint and every own-data endpoint requires this (plan
+ * §7.6). Validated against the `installs` table by apps/api's auth
+ * middleware, not by Zod itself — this only checks the header is shaped
+ * like a bearer token, not that it resolves to a real install.
+ */
+export const AuthHeaderSchema = z.object({
+  authorization: z.string().regex(/^Bearer .+/).openapi({
+    description: "Bearer <install token>",
+    example: "Bearer 5f3c2a1e9b7d4f6a8c0e2b4d6f8a0c2e",
+  }),
+});
+
 export const ErrorEnvelopeSchema = z
   .object({
     error: z.object({

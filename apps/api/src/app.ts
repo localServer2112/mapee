@@ -8,6 +8,8 @@ import { areas } from "./routes/areas.js";
 import { ispRankings } from "./routes/isp-rankings.js";
 import { scans } from "./routes/scans.js";
 import { scanDetail } from "./routes/scan-detail.js";
+import { installs } from "./routes/installs.js";
+import { meScans } from "./routes/me-scans.js";
 import { docs } from "./routes/docs.js";
 import { errorEnvelope, validationErrorHook } from "./lib/errors.js";
 import { requestLogger, type LoggingVariables } from "./lib/logging.js";
@@ -33,6 +35,8 @@ app.route("/", areas);
 app.route("/", ispRankings);
 app.route("/", scans);
 app.route("/", scanDetail);
+app.route("/", installs);
+app.route("/", meScans);
 app.route("/", docs);
 
 app.notFound((c) =>

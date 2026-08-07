@@ -42,7 +42,7 @@ export const ScanDetailSchema = ScanSchema.extend({
   lng: LngSchema.openapi({ description: "Exact submitted location" }),
   isLocationExact: z.boolean().openapi({
     description:
-      "False only for legacy rows predating coordinate encryption, where decryption falls back to the grid-snapped value. Always true for new scans.",
+      "True only when the caller is authenticated as the install that submitted this scan and its exact location decrypted successfully. False for every other caller (unauthenticated, or a different install) and for legacy rows predating coordinate encryption -- in all of those cases lat/lng are the grid-snapped value, not the exact one.",
   }),
 }).openapi("ScanDetail");
 
@@ -85,7 +85,18 @@ export const CreateScanRequestSchema = z
     jitter: z.number().min(0).max(10000),
     uploadSpeed: z.number().min(0).max(10000),
     downloadSpeed: z.number().min(0).max(10000),
+    // Client-declared, same trust boundary as every other submitted field —
+    // the server does not (and cannot, without re-running the transfer
+    // itself) independently verify this. Defaults to 'heuristic' so an
+    // un-upgraded/older client that omits it never gets counted as a real
+    // measurement it didn't actually perform. See ThroughputResult (mobile,
+    // Track B Phase 3) for where a 'measured' value should come from.
+    measurementMethod: z.enum(["heuristic", "measured"]).default("heuristic"),
     deviceType: DeviceTypeSchema,
+    radioType: z.string().max(10).optional(),
+    signalDbm: z.number().int().optional(),
+    mcc: z.string().max(10).optional(),
+    mnc: z.string().max(10).optional(),
   })
   .openapi("CreateScanRequest");
 
@@ -96,3 +107,12 @@ export const CreateScanResponseSchema = z
     timestamp: z.number().int(),
   })
   .openapi("CreateScanResponse");
+
+/** GET /v1/me/scans — the owning install, so exact coordinates throughout. */
+export const MyScansResponseSchema = z.array(ScanDetailSchema).openapi("MyScansResponse");
+
+export const DeleteMyScansResponseSchema = z
+  .object({
+    deletedCount: z.number().int().min(0),
+  })
+  .openapi("DeleteMyScansResponse");

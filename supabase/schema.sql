@@ -9,6 +9,32 @@ CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
 ALTER TABLE IF EXISTS public.spatial_ref_sys OWNER TO postgres;
 ALTER TABLE IF EXISTS public.spatial_ref_sys ENABLE ROW LEVEL SECURITY;
 
+-- Installs table - anonymous per-device identity for write auth, rate
+-- limiting, and own-data access (plan §7.6). Not a user account: no PII, no
+-- sign-up. Stores a hash of the opaque token, never the token itself, same
+-- reasoning as password storage -- a DB leak shouldn't yield usable tokens.
+CREATE TABLE IF NOT EXISTS installs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token_hash TEXT NOT NULL UNIQUE,
+  platform VARCHAR(20) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_installs_token_hash ON installs (token_hash);
+
+-- No RLS policies granting anon anything here deliberately: token issuance
+-- and verification are server-side operations using the service-role key,
+-- never a direct client-to-Supabase call like ping_logs' anonymous insert
+-- below. Default-deny for anon/authenticated.
+ALTER TABLE installs ENABLE ROW LEVEL SECURITY;
+
+-- service_role bypasses RLS policies, but RLS bypass is separate from base
+-- table grants -- without this, every installs query from apps/api fails
+-- with "permission denied for table installs" even though the role can see
+-- past RLS. Confirmed by actually applying this to a real database.
+GRANT SELECT, INSERT, UPDATE ON installs TO service_role;
+
 -- Ping logs table - stores individual network test results
 -- Exact coordinates are AES-256-GCM encrypted; grid coordinates (~500m) used for spatial queries
 CREATE TABLE IF NOT EXISTS ping_logs (
@@ -30,19 +56,29 @@ CREATE TABLE IF NOT EXISTS ping_logs (
   user_agent TEXT,
   -- 'heuristic': speed derived from a latency-based formula, not measured
   -- (see src/lib/speedtest.ts and rewrite plan §6.2/§7.5 item 2). 'measured'
-  -- is reserved for a real throughput test, which no client can perform yet
-  -- as of this column's introduction — every row today is 'heuristic', and
-  -- isp_rankings below filters to 'measured' only, so it returns nothing
-  -- until a client capable of a real measurement exists. That's the plan's
-  -- explicit intent, not an oversight: never present fabricated numbers as
-  -- if they were measured ISP rankings.
+  -- is reserved for a real throughput test. Set from the client's own
+  -- ThroughputResult outcome (Track B Phase 3) via POST /v1/scans -- trusted
+  -- client-declared for now, same trust boundary as every other submitted
+  -- field; isp_rankings below filters to 'measured' only.
   measurement_method VARCHAR(20) NOT NULL DEFAULT 'heuristic'
     CHECK (measurement_method IN ('heuristic', 'measured')),
+  -- Nullable: who submitted this (plan §7.5 item 1's ownership restriction
+  -- on exact coordinates) and radio metadata (§7.5 item 3, mostly
+  -- Android -- mapee_radio's iOS carrier/RAT access is far more limited).
+  -- ON DELETE SET NULL, not CASCADE: deleting an install must not delete the
+  -- anonymized aggregate-contributing scan data it submitted.
+  owner_install_id UUID REFERENCES installs(id) ON DELETE SET NULL,
+  radio_type VARCHAR(10),
+  signal_dbm INTEGER,
+  mcc VARCHAR(10),
+  mnc VARCHAR(10),
   created_at TIMESTAMPTZ DEFAULT NOW(),
 
   CONSTRAINT valid_lat_grid CHECK (lat_grid >= -90 AND lat_grid <= 90),
   CONSTRAINT valid_lng_grid CHECK (lng_grid >= -180 AND lng_grid <= 180)
 );
+
+CREATE INDEX IF NOT EXISTS idx_ping_logs_owner_install_id ON ping_logs (owner_install_id);
 
 -- Create spatial index for geographic queries
 CREATE INDEX IF NOT EXISTS idx_ping_logs_location ON ping_logs USING GIST (location);
@@ -264,3 +300,10 @@ GRANT SELECT ON hexbin_stats TO anon;
 GRANT SELECT ON isp_rankings TO anon;
 GRANT EXECUTE ON FUNCTION get_pings_in_bounds TO anon;
 GRANT EXECUTE ON FUNCTION get_hexbin_stats_in_bounds TO anon;
+
+-- service_role bypasses RLS policies (including "Prevent deletes" above),
+-- but RLS bypass is separate from base table grants -- apps/api's
+-- service-role client needs its own explicit grant for scan submission
+-- (INSERT), scan detail/me-scans reads (SELECT), and delete-my-data
+-- (DELETE). Confirmed by actually applying this to a real database.
+GRANT SELECT, INSERT, DELETE ON ping_logs TO service_role;

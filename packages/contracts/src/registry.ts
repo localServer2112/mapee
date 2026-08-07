@@ -1,6 +1,6 @@
 import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { z } from "./zod-setup";
-import { ErrorEnvelopeSchema } from "./schemas/common";
+import { AuthHeaderSchema, ErrorEnvelopeSchema } from "./schemas/common";
 import { AreaSchema, AreaListQuerySchema } from "./schemas/area";
 import {
   ScanSchema,
@@ -8,26 +8,28 @@ import {
   ScanListQuerySchema,
   CreateScanRequestSchema,
   CreateScanResponseSchema,
+  MyScansResponseSchema,
+  DeleteMyScansResponseSchema,
 } from "./schemas/scan";
 import { ISPRankingSchema, ISPRankingsQuerySchema } from "./schemas/isp-ranking";
 import { GeocodeResultSchema, GeocodeQuerySchema } from "./schemas/geocode";
 import { CellTowerSchema, TowersQuerySchema } from "./schemas/tower";
 import { NetworkIdentifySchema } from "./schemas/network";
 import { ConfigSchema } from "./schemas/config";
+import { CreateInstallRequestSchema, CreateInstallResponseSchema } from "./schemas/install";
 
 /**
  * The v1 surface — see plan §7.4. This registry is the map from "existing
- * five routes" to the renamed, versioned paths, plus /v1/config (new, no
- * route to port from). It does not yet cover /v1/installs, /v1/me/scans, or
- * /v1/measure/*, which land with auth in a later phase (A4) once there's a
- * server to authenticate against.
+ * five routes" to the renamed, versioned paths, plus /v1/config, /v1/installs,
+ * /v1/me/scans (new, no route to port from — these land with auth in A4).
+ * /v1/measure/* is not yet covered — still using third-party throughput
+ * endpoints per plan §6.2/§7.4's note, not a first-party one.
  *
- * Routes apps/api actually implements (currently: config, geocode) are
- * defined as named exports below rather than inline, so apps/api imports the
- * exact same RouteConfig object this registry uses for spec generation —
- * one definition, reused for both validation and documentation, per plan
- * §7.3. Routes not yet implemented anywhere stay inline; there is nothing
- * for a second consumer to import yet.
+ * Routes apps/api actually implements are defined as named exports below
+ * rather than inline, so apps/api imports the exact same RouteConfig object
+ * this registry uses for spec generation — one definition, reused for both
+ * validation and documentation, per plan §7.3. Routes not yet implemented
+ * anywhere stay inline; there is nothing for a second consumer to import yet.
  */
 export const registry = new OpenAPIRegistry();
 
@@ -75,13 +77,14 @@ export const getScansRoute = {
 };
 registry.registerPath(getScansRoute);
 
-registry.registerPath({
-  method: "post",
+export const postScansRoute = {
+  method: "post" as const,
   path: "/v1/scans",
   summary: "Submit a scan",
-  description: "Requires an install token once auth lands in A4. Idempotent on client-supplied id.",
+  description: "Requires an install token (POST /v1/installs). Idempotent on client-supplied id.",
   tags: ["Scans"],
   request: {
+    headers: AuthHeaderSchema,
     body: {
       content: { "application/json": { schema: CreateScanRequestSchema } },
     },
@@ -91,17 +94,78 @@ registry.registerPath({
       description: "Scan recorded",
       content: { "application/json": { schema: CreateScanResponseSchema } },
     },
+    400: errorResponse("Validation failure, or an implausible measurement rejected as an outlier"),
+    401: errorResponse("Missing or invalid install token"),
+    429: errorResponse("Rate limited"),
+    500: errorResponse("Database error"),
+    503: errorResponse("Database not configured"),
+  },
+};
+registry.registerPath(postScansRoute);
+
+export const postInstallsRoute = {
+  method: "post" as const,
+  path: "/v1/installs",
+  summary: "Register an anonymous install, returning a write/own-data token",
+  description: "No auth required — this is how a client gets its first token. The token is returned exactly once.",
+  tags: ["Installs"],
+  request: {
+    body: {
+      content: { "application/json": { schema: CreateInstallRequestSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: "Install registered",
+      content: { "application/json": { schema: CreateInstallResponseSchema } },
+    },
     400: errorResponse("Validation failure — see details"),
     429: errorResponse("Rate limited"),
+    500: errorResponse("Database error"),
   },
-});
+};
+registry.registerPath(postInstallsRoute);
+
+export const getMyScansRoute = {
+  method: "get" as const,
+  path: "/v1/me/scans",
+  summary: "List scans submitted by the authenticated install",
+  description: "Exact coordinates throughout — this is the owning install, not a third party.",
+  tags: ["Installs"],
+  request: { headers: AuthHeaderSchema },
+  responses: {
+    200: {
+      description: "This install's own scans",
+      content: { "application/json": { schema: MyScansResponseSchema } },
+    },
+    401: errorResponse("Missing or invalid install token"),
+  },
+};
+registry.registerPath(getMyScansRoute);
+
+export const deleteMyScansRoute = {
+  method: "delete" as const,
+  path: "/v1/me/scans",
+  summary: "Delete every scan submitted by the authenticated install",
+  description: "Own-data deletion (store requirement). Irreversible; no per-id granularity.",
+  tags: ["Installs"],
+  request: { headers: AuthHeaderSchema },
+  responses: {
+    200: {
+      description: "Deleted",
+      content: { "application/json": { schema: DeleteMyScansResponseSchema } },
+    },
+    401: errorResponse("Missing or invalid install token"),
+  },
+};
+registry.registerPath(deleteMyScansRoute);
 
 export const getScanDetailRoute = {
   method: "get" as const,
   path: "/v1/scans/{id}",
   summary: "A single scan, at exact precision",
   description:
-    "Exact coordinates are only ever returned here. Not yet restricted to the submitting install — that arrives with A4 auth; today this matches the legacy route's behavior of any shareable-link holder being able to view a scan's exact location.",
+    "Exact coordinates are only ever returned here, and only to the submitting install (optional auth — a non-owner or unauthenticated caller gets grid coordinates instead, not a 401/403).",
   tags: ["Scans"],
   request: {
     params: z.object({ id: z.string().uuid() }),
