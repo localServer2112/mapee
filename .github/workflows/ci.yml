@@ -153,3 +153,40 @@ jobs:
       # until that's actually worth the extra CI cost.
       - name: Build (Android debug APK)
         run: cd apps/mobile && flutter build apk --debug
+
+  deploy-api:
+    name: Deploy apps/api (Railway)
+    needs: ci
+    # Only after the ci job passes, and only for a real push to main -- never
+    # for a pull_request event (a PR from a fork wouldn't have access to the
+    # secret anyway, and a PR shouldn't deploy regardless). This is what
+    # actually makes this CD rather than just Railway's own git integration
+    # racing an untested commit into production the moment it's pushed.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # apps/api runs via tsx directly against TypeScript source in
+      # production (see apps/api/README.md's "Two things that are easy to
+      # get wrong here" -- @mapee/core and @mapee/contracts have no build
+      # step of their own, so a dist/-based deploy of apps/api alone would
+      # resolve at compile time and then fail to load its own workspace
+      # dependencies at runtime). Railway therefore needs the whole
+      # workspace, not apps/api in isolation -- root-level railway.json's
+      # buildCommand/startCommand reflect that, the same lesson already
+      # learned the hard way with apps/web's Vercel Root Directory setting.
+      # --ci streams build logs then exits non-interactively (real flag,
+      # verified against `railway up --help` in @railway/cli 5.30.4 rather
+      # than assumed). --service/--environment are explicit rather than
+      # relying on whatever's linked, since nothing is ever `railway link`ed
+      # in a fresh CI runner. RAILWAY_TOKEN should be a *project* token
+      # (Railway dashboard -> project -> Settings -> Tokens), which scopes
+      # auth to this one project without needing an interactive login/link.
+      - name: Deploy to Railway
+        run: |
+          npm install -g @railway/cli
+          railway up --ci --service api --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

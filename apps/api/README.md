@@ -48,15 +48,48 @@ open http://localhost:8787/docs   # browsable API reference
 
 ## Environment variables
 
-All optional — the service degrades gracefully with each unset, same as
-`apps/web`'s API routes did.
+All optional in the sense that the service boots and `/healthz` responds
+with none of them set — but `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+and `ENCRYPTION_KEY` are load-bearing for every database-backed route (areas,
+scans, installs, isp-rankings); without them every one of those returns
+`x-database-status: not-configured` and an empty/degraded response instead
+of erroring, same as `apps/web`'s API routes did.
 
-| Variable | Used for |
-|---|---|
-| `PORT` | The port `src/index.ts` listens on. Defaults to `8787`. |
-| `TRUSTED_PROXIES` | Comma-separated list of proxy IPs `src/lib/client-ip.ts` trusts when resolving a client's real IP from `X-Forwarded-For`. Unset means no proxy is trusted and the immediate socket address is used. |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis, used for response caching (e.g. geocode) and rate limiting. Both unset falls back to an in-memory cache/limiter — fine for local dev, not for a multi-instance deployment. |
-| `SENTRY_DSN` | Error reporting via `src/lib/sentry.ts`. Unset disables reporting entirely rather than erroring. |
+| Variable | Used for | Required for |
+|---|---|---|
+| `PORT` | The port `src/index.ts` listens on. Defaults to `8787`. | — |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL. | Any database-backed route |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key, for the anon-scoped client. | Any database-backed route |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key, bypasses RLS for server-side writes/own-data reads. | Installs, scan submission, `/v1/me/scans` |
+| `ENCRYPTION_KEY` | 64-char hex AES-256-GCM key encrypting/decrypting stored coordinates. Must be exactly 64 hex characters, and must never change once real data exists — see `supabase/migrate-encryption.sql`. | Any route touching `lat`/`lng` |
+| `TRUSTED_PROXIES` | Comma-separated list of proxy IPs `src/lib/client-ip.ts` trusts when resolving a client's real IP from `X-Forwarded-For`. Unset means no proxy is trusted and the immediate socket address is used. | — |
+| `OPENCELLID_API_KEY` | Proxies cell tower data via `/v1/towers`. Unset returns 503 from that one route; the rest of the service is unaffected. | `/v1/towers` only |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis, used for response caching (e.g. geocode) and rate limiting. Both unset falls back to an in-memory cache/limiter — fine for local dev, not for a multi-instance deployment. | — |
+| `SENTRY_DSN` | Error reporting via `src/lib/sentry.ts`. Unset disables reporting entirely rather than erroring. | — |
+
+## Deployment (Railway)
+
+`.github/workflows/ci.yml`'s `deploy-api` job deploys this on every push to
+`main` that passes the `ci` job first — not Railway's own git integration,
+which would deploy an untested commit the moment it's pushed. One-time setup:
+
+1. Create a Railway project, add an empty service named exactly `api`
+   (matching `--service api` in the deploy step).
+2. Set the environment variables above in that service (Railway dashboard →
+   service → Variables) — at minimum the four marked "load-bearing" if you
+   want database-backed routes to actually work in this deployment.
+3. Generate a **project** token (Railway dashboard → project → Settings →
+   Tokens, not a personal account token — a project token scopes CI auth to
+   this one project without an interactive `railway link`) and add it as the
+   `RAILWAY_TOKEN` secret in this repo's GitHub Settings → Secrets → Actions.
+
+Root-level `railway.json` (not `apps/api/railway.json`) controls the actual
+build/start commands — it has to live at the repo root because this is a
+pnpm workspace and, per the note above about `tsx` vs `dist/`, `apps/api` in
+production needs `@mapee/core`/`@mapee/contracts`' source present alongside
+it, not just its own directory. The same class of mistake that hit
+`apps/web`'s Vercel "Root Directory" setting earlier — scoping the build to
+one package's directory silently breaks workspace dependency resolution.
 
 ## Two things that are easy to get wrong here
 
