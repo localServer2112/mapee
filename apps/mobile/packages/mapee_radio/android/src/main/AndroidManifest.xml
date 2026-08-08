@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.mapee.mapee_radio">
+  <!-- Declaration only: this plugin never requests this permission itself. It only
+       reads TelephonyManager.dataNetworkType when the host app has already been
+       granted READ_PHONE_STATE via its own request flow; otherwise it null-guards. -->
+  <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+</manifest>

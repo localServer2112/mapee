@@ -13,3 +13,5 @@ export const NetworkIdentifySchema = z
     org: z.string(),
   })
   .openapi("NetworkIdentify");
+
+export type NetworkIdentify = z.infer<typeof NetworkIdentifySchema>;

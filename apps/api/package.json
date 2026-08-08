@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "tsx src/index.ts",
+    "start": "tsx --env-file-if-exists=.env src/index.ts",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -20,12 +20,16 @@
     "@hono/node-server": "^1.19.6",
     "@hono/zod-openapi": "^0.19.10",
     "@scalar/hono-api-reference": "^0.11.12",
+    "@supabase/supabase-js": "^2.39.0",
     "@upstash/redis": "^1.36.2",
     "@upstash/ratelimit": "^2.0.8",
+    "whoiser": "^2.0.0-beta.10",
+    "ws": "^8.21.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^7",
     "@typescript-eslint/parser": "^7",
     "eslint": "^8",

@@ -277,8 +277,31 @@
             "minimum": 0,
             "maximum": 10000
           },
+          "measurementMethod": {
+            "type": "string",
+            "enum": [
+              "heuristic",
+              "measured"
+            ],
+            "default": "heuristic"
+          },
           "deviceType": {
             "$ref": "#/components/schemas/DeviceType"
+          },
+          "radioType": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "signalDbm": {
+            "type": "integer"
+          },
+          "mcc": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "mnc": {
+            "type": "string",
+            "maxLength": 10
           }
         },
         "required": [
@@ -290,6 +313,41 @@
           "uploadSpeed",
           "downloadSpeed",
           "deviceType"
+        ]
+      },
+      "CreateInstallResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token"
+        ]
+      },
+      "InstallPlatform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android",
+          "web"
+        ]
+      },
+      "CreateInstallRequest": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/InstallPlatform"
+          }
+        },
+        "required": [
+          "platform"
         ]
       },
       "ScanDetail": {
@@ -316,13 +374,31 @@
               },
               "isLocationExact": {
                 "type": "boolean",
-                "description": "False only for legacy rows predating coordinate encryption, where decryption falls back to the grid-snapped value. Always true for new scans."
+                "description": "True only when the caller is authenticated as the install that submitted this scan and its exact location decrypted successfully. False for every other caller (unauthenticated, or a different install) and for legacy rows predating coordinate encryption -- in all of those cases lat/lng are the grid-snapped value, not the exact one."
               }
             },
             "required": [
               "isLocationExact"
             ]
           }
+        ]
+      },
+      "MyScansResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ScanDetail"
+        }
+      },
+      "DeleteMyScansResponse": {
+        "type": "object",
+        "properties": {
+          "deletedCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "deletedCount"
         ]
       },
       "ISPRanking": {
@@ -639,6 +715,9 @@
               }
             }
           },
+          "304": {
+            "description": "Not modified — If-None-Match matched the current ETag"
+          },
           "400": {
             "description": "Invalid bounding box",
             "content": {
@@ -651,6 +730,16 @@
           },
           "429": {
             "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
             "content": {
               "application/json": {
                 "schema": {
@@ -687,7 +776,7 @@
               "minimum": 1,
               "maximum": 90,
               "default": 30,
-              "description": "Days. Capped at 90 regardless of requested value."
+              "description": "Days, 1-90. Requests above 90 are rejected (400), not silently clamped — the legacy /api/pings route clamped instead, which can mask a client bug that meant to send a much smaller value."
             },
             "required": false,
             "name": "maxAge",
@@ -727,14 +816,37 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
       "post": {
         "summary": "Submit a scan",
-        "description": "Requires an install token once auth lands in A4. Idempotent on client-supplied id.",
+        "description": "Requires an install token (POST /v1/installs). Idempotent on client-supplied id.",
         "tags": [
           "Scans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer .+",
+              "description": "Bearer <install token>",
+              "example": "Bearer 5f3c2a1e9b7d4f6a8c0e2b4d6f8a0c2e"
+            },
+            "required": true,
+            "name": "authorization",
+            "in": "header"
+          }
         ],
         "requestBody": {
           "content": {
@@ -752,6 +864,86 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CreateScanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure, or an implausible measurement rejected as an outlier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid install token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/installs": {
+      "post": {
+        "summary": "Register an anonymous install, returning a write/own-data token",
+        "description": "No auth required — this is how a client gets its first token. The token is returned exactly once.",
+        "tags": [
+          "Installs"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Install registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallResponse"
                 }
               }
             }
@@ -775,6 +967,102 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/scans": {
+      "get": {
+        "summary": "List scans submitted by the authenticated install",
+        "description": "Exact coordinates throughout — this is the owning install, not a third party.",
+        "tags": [
+          "Installs"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer .+",
+              "description": "Bearer <install token>",
+              "example": "Bearer 5f3c2a1e9b7d4f6a8c0e2b4d6f8a0c2e"
+            },
+            "required": true,
+            "name": "authorization",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "This install's own scans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyScansResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid install token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete every scan submitted by the authenticated install",
+        "description": "Own-data deletion (store requirement). Irreversible; no per-id granularity.",
+        "tags": [
+          "Installs"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer .+",
+              "description": "Bearer <install token>",
+              "example": "Bearer 5f3c2a1e9b7d4f6a8c0e2b4d6f8a0c2e"
+            },
+            "required": true,
+            "name": "authorization",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMyScansResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid install token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -782,7 +1070,7 @@
     "/v1/scans/{id}": {
       "get": {
         "summary": "A single scan, at exact precision",
-        "description": "Exact coordinates are only ever returned here, and only to the submitting install once A4 auth lands.",
+        "description": "Exact coordinates are only ever returned here, and only to the submitting install (optional auth — a non-owner or unauthenticated caller gets grid coordinates instead, not a 401/403).",
         "tags": [
           "Scans"
         ],
@@ -827,6 +1115,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Stored data failed contract validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -859,6 +1167,26 @@
                   "items": {
                     "$ref": "#/components/schemas/ISPRanking"
                   }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -977,6 +1305,9 @@
               }
             }
           },
+          "304": {
+            "description": "Not modified — If-None-Match matched the current ETag"
+          },
           "400": {
             "description": "Invalid bbox",
             "content": {
@@ -989,6 +1320,16 @@
           },
           "429": {
             "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "OpenCelliD returned an error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1040,7 +1381,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Best-effort network identity",
+            "description": "Best-effort network identity. Always 200, even on lookup failure — see NetworkIdentifySchema's all-Unknown fallback shape.",
             "content": {
               "application/json": {
                 "schema": {

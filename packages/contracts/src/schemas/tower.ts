@@ -14,6 +14,8 @@ export const CellTowerSchema = z
   })
   .openapi("CellTower");
 
+export type CellTower = z.infer<typeof CellTowerSchema>;
+
 export const TowersQuerySchema = z
   .object({
     bbox: z

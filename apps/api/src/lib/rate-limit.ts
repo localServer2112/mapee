@@ -8,6 +8,13 @@ interface RateLimitConfig {
   interval: number; // ms
   uniqueTokenPerInterval: number;
   namespace: string;
+  /**
+   * Defaults to IP. Pass this for routes with an authenticated install
+   * (plan §7.6: "keyed on install token, falling back to IP" -- Nigerian
+   * carriers NAT large populations behind few addresses, so an IP-only key
+   * throttles legitimate users as soon as the app has traction).
+   */
+  key?: (c: Context) => string;
 }
 
 interface RateLimitResult {
@@ -36,11 +43,11 @@ export function rateLimit(config: RateLimitConfig) {
     : null;
 
   return async function checkRateLimit(c: Context): Promise<RateLimitResult> {
-    const ip = getClientIP(c);
+    const identity = config.key ? config.key(c) : getClientIP(c);
 
     if (upstashLimiter) {
       try {
-        const result = await upstashLimiter.limit(ip);
+        const result = await upstashLimiter.limit(identity);
         return { success: result.success, remaining: result.remaining, reset: result.reset };
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -48,7 +55,7 @@ export function rateLimit(config: RateLimitConfig) {
       }
     }
 
-    const key = `${config.namespace}:${ip}`;
+    const key = `${config.namespace}:${identity}`;
     const now = Date.now();
     const entry = localRateLimitStore.get(key);
 
@@ -70,13 +77,32 @@ export function rateLimit(config: RateLimitConfig) {
   };
 }
 
+/**
+ * Reads `installId` off context (set by a route that already ran auth
+ * resolution — see AuthVariables in ./auth.ts), falling back to IP when
+ * absent. Passed as `scanSubmit`'s `key` below since that's the one route
+ * A4 actually authenticates; every other limiter here stays IP-keyed.
+ */
+function installOrIp(c: Context): string {
+  return (c.get("installId") as string | undefined) ?? getClientIP(c);
+}
+
 // Only `geocode` is wired to a route so far (GET /v1/geocode, this phase).
 // The rest are declared ahead of the routes that will use them in A3, so
 // the namespaces and limits are settled once rather than invented per-route.
 export const apiRateLimits = {
   geocode: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 30, namespace: "geocode" }),
+  // Mint-a-credential endpoint (POST /v1/installs, plan §7.6): unauthenticated
+  // by definition — there's no install token yet to key by — so this stays
+  // IP-only, and deliberately tighter than every other limiter here.
+  installs: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 5, namespace: "installs" }),
   networkIdentify: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 20, namespace: "networkIdentify" }),
-  scanSubmit: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 10, namespace: "scanSubmit" }),
+  scanSubmit: rateLimit({
+    interval: 60 * 1000,
+    uniqueTokenPerInterval: 10,
+    namespace: "scanSubmit",
+    key: installOrIp,
+  }),
   dataFetch: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 60, namespace: "dataFetch" }),
   towers: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 20, namespace: "towers" }),
 };
